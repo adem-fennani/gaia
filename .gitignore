@@ -1,0 +1,9 @@
+# Object files
+*.o
+# Executables
+pro
+# Clion / IDEA files
+.idea/
+cmake-build-*/
+CMakeLists.txt
+/TODO.md

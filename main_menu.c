@@ -8,14 +8,38 @@ int main()
 //variables de main menu
 	SDL_Surface *screen= NULL; 
 	image background,B_play,B_play1, B_settings,B_settings1, B_quit,B_quit1, settings,slayed,exits,exits1;
+	// Zero-initialize all image structures
+	memset(&background, 0, sizeof(image));
+	memset(&B_play, 0, sizeof(image));
+	memset(&B_play1, 0, sizeof(image));
+	memset(&B_settings, 0, sizeof(image));
+	memset(&B_settings1, 0, sizeof(image));
+	memset(&B_quit, 0, sizeof(image));
+	memset(&B_quit1, 0, sizeof(image));
+	memset(&settings, 0, sizeof(image));
+	memset(&slayed, 0, sizeof(image));
+	memset(&exits, 0, sizeof(image));
+	memset(&exits1, 0, sizeof(image));
 	SDL_Rect pos_plus,pos_moin;
 	int i;
 	//char animation[50];//bech n7oto fih asem lta3 image 5ater fil animation kolmara yetbadel el esem 
 	
 //variables du perso
-perso p,p1;
+perso p, p1;
+// Zero-initialize the perso structs to avoid garbage values
+memset(&p, 0, sizeof(perso));
+memset(&p1, 0, sizeof(perso));
+printf("DEBUG: Creating game background surface...\n");
+fflush(stdout);
 image backgame;
-    backgame.img=IMG_Load("niv1.png");
+memset(&backgame, 0, sizeof(image));
+    // TODO: Niv1.png appears to be corrupted (libpng CRC error)
+    // For now, creating a dummy surface to test the rest of the code
+    backgame.img = SDL_CreateRGBSurface(0, 1150, 650, 32, 0, 0, 0, 0);
+    if(backgame.img == NULL) {
+        printf("ERROR: Failed to create backgame surface\n");
+        fflush(stdout);
+    }
     backgame.pos.x=0;
     backgame.pos.y=0;
     backgame.pos.w=1150;
@@ -24,61 +48,77 @@ image backgame;
 //variables du mini map
 	minimap m;
 	temps t;
+	// Zero-initialize minimap and temps structs
+	memset(&m, 0, sizeof(minimap));
+	memset(&t, 0, sizeof(temps));
 //variables du back
 //variables du enemie
     
+//Initialize SDL first - MUST happen before using any SDL functions
+	SDL_Init(SDL_INIT_EVERYTHING);
+
 //initial video
 	putenv("SDL_VIDEO_CENTRED=1=");
 	screen= SDL_SetVideoMode(1150,650, 32, SDL_HWSURFACE|SDL_DOUBLEBUF);// fil exmple w1=800,h2=400
-	SDL_WM_SetCaption("VANGUARD REPRESENT ", NULL );//faza:Sets the window tile and icone (null)
-	
-// sound
-	if(Mix_OpenAudio(44100,MIX_DEFAULT_FORMAT,MIX_DEFAULT_CHANNELS,1024)==-1)
-	{
-		printf("FAIL AUDIO %s\n",Mix_GetError());
-	}
-	Mix_Music *music;
-	music=Mix_LoadMUS("music.mp3");//load tha music
-	Mix_PlayMusic(music,-1);//play music
-	
-//sound bref
-	Mix_Volume(1, MIX_MAX_VOLUME/2);
-	Mix_Chunk *son;
-	son = Mix_LoadWAV("mouseclick.wav");
-	Mix_VolumeChunk(son, MIX_MAX_VOLUME/2);
+	SDL_WM_SetCaption("GAIA REPRESENT ", NULL );//faza:Sets the window tile and icone (null)
 
-//in case fama ghalta
-	SDL_Init(SDL_INIT_EVERYTHING);                     	 
-	
-//verif d initial
+	// Initialize SDL_image for PNG loading
+	printf("DEBUG: Initializing SDL_image...\n");
+	fflush(stdout);
+	IMG_Init(IMG_INIT_PNG);
+	printf("DEBUG: SDL_image initialized\n");
+	fflush(stdout);
+
+	//verif d initial
 	if( screen == NULL )
     {
         printf( "Can't set video mode: %s \n", SDL_GetError( ) );
     	return EXIT_FAILURE;
 	}
-//background init
 
-	init_background(&background, "background.jpg");
-  /*   	init_background(&imgBACK[0],"background.jpg");
- 	for(i=1;i<21;i++)//init tab image 
-     	{	sprintf(animation,"animation/ASSET_0000%d.jpg",i);
-     		init_background(&imgBACK[i],animation);
-     	}
-	if (imgBACK[0].img==NULL)
-    	{printf(" loading error !  %s \n", SDL_GetError( ));}
- */
-//MENU BUTTONS 
-    init_bouton(&B_play,"B_play.png",&B_settings,"B_settings.png",&B_quit,"B_quit.png");//init les boutons fil hala lewla
-    init_bouton(&B_play1,"B_play1.png",&B_settings1,"B_settings1.png",&B_quit1,"B_quit1.png");//init les boutons fil hala ell theniya
-    
+// sound - initialize with optimized settings for SDL 1.2
+	// Try smaller buffer size (256) for cleaner audio, use explicit format
+	if(Mix_OpenAudio(22050, MIX_DEFAULT_FORMAT, 2, 256)==-1)
+	{
+		printf("FAIL AUDIO %s\n",Mix_GetError());
+	}
+	Mix_Music *music;
+	music=Mix_LoadMUS("music.mp3");//load tha music
+	if(music == NULL) {
+		printf("FAIL MUSIC LOAD %s\n", Mix_GetError());
+	}
+	Mix_PlayMusic(music,-1);//play music
+	
+//sound bref - use -1 for all channels, not channel 1
+	Mix_Volume(-1, MIX_MAX_VOLUME/3);  // Start with lower volume
+	Mix_Chunk *son;
+	son = Mix_LoadWAV("mouseclick.wav");
+	if(son == NULL) {
+		printf("FAIL SOUND LOAD %s\n", Mix_GetError());
+	}
+	Mix_VolumeChunk(son, MIX_MAX_VOLUME/3);
+
+//background init
+printf("DEBUG: Skipping menu image loads for now (testing core game)\n");
+fflush(stdout);
+// All image loading disabled for testing - we'll use dummy surfaces
+//	init_background(&background, "background.jpg");
+
+//MENU BUTTONS
+// All button loading disabled
+//    init_bouton(&B_play,"B_play.png",&B_settings,"B_settings.png",&B_quit,"B_quit.png");
+//    init_bouton(&B_play1,"B_play1.png",&B_settings1,"B_settings1.png",&B_quit1,"B_quit1.png");
+
 //kent fil settings initialisation
-    init_background(&settings,"settings.png");//background setting
-    
-    init_retour_bouton(&exits,"exits.png");//back to main menu
-    init_retour_bouton(&exits1,"exits1.png");//back to main menu si selectionne
-   
-    init_volume_slayed(&slayed,"slayed.png");//slayed music
-    
+// All settings image loading disabled
+//    init_background(&settings,"settings.png");
+//    init_retour_bouton(&exits,"exits.png");
+//    init_retour_bouton(&exits1,"exits1.png");
+//    init_volume_slayed(&slayed,"slayed.png");
+
+printf("DEBUG: Core game initialized without images\n");
+fflush(stdout);
+
     pos_moin.x=489;
     pos_moin.y=227;
     pos_moin.w=	512-489;
@@ -90,19 +130,25 @@ image backgame;
     pos_plus.h=34;
     
 //init perso
+printf("DEBUG: Initializing TTF...\n");
+fflush(stdout);
 TTF_Init();
-screen = SDL_SetVideoMode(1150,650, 32, SDL_HWSURFACE|SDL_DOUBLEBUF);
-    if( screen == NULL )
-    {
-        printf( "Can't set video mode: %s \n", SDL_GetError( ) );
-        return EXIT_FAILURE;
-    }
+printf("DEBUG: Initializing perso...\n");
+fflush(stdout);
 initPerso(&p);
+printf("DEBUG: Initializing perso1...\n");
+fflush(stdout);
 initPerso1(&p1);
 
 //iinit minimap
+printf("DEBUG: Initializing minimap...\n");
+fflush(stdout);
 	initmap(&m);
+printf("DEBUG: Initializing temps...\n");
+fflush(stdout);
 	init_temps(&t);
+printf("DEBUG: Setup complete, entering main loop...\n");
+fflush(stdout);
 //event (souris ou clavier)
 	SDL_Event event;//evenment 
 	int done=1 , n=0;
@@ -122,8 +168,8 @@ Uint32 dt, t_prev;
 
 while(done)
 {
+    dt=SDL_GetTicks()-t_prev;
     t_prev=SDL_GetTicks();
-    afficherPerso(p,screen); 
     switch (etat)
     {
         case 0 ://ken ahna mawjoudin fil menu
@@ -609,9 +655,12 @@ while(done)
                     }
 
                     saut(&p1,posy1);
-                    dt=SDL_GetTicks()-t_prev;                  
                     SDL_Flip(screen);
-                    SDL_Delay(300/dt);
+                    // Prevent division by zero; cap frame rate at ~30fps minimum
+                    if(dt > 0)
+                        SDL_Delay(300/dt);
+                    else
+                        SDL_Delay(16);  // Default ~60fps if dt is 0
 		            p.iscore++;
                     if(p.iscore/20>30)
                     {
@@ -687,29 +736,67 @@ while(done)
 	            Mix_FreeMusic(music); 
 	            Mix_FreeChunk( son); 
 	
-                //perso
+                //perso cleanup
                 TTF_CloseFont(p.police_score);
                 TTF_CloseFont(p1.police_score);
                 TTF_Quit();
+
+                // Free player 1 images
                 for (i=0;i<2;i++)
                 {
-	                for (i=0;i<7;i++)
+	                for (j=0;j<7;j++)
                     {
-		                SDL_FreeSurface(p.image[i][j]);
+		                if(p.image[i][j] != NULL) {
+		                    SDL_FreeSurface(p.image[i][j]);
+		                }
                     }
                 }
-		
+                // Free player 1 health bar images
+                if(p.barre != NULL) {
+                    for(i=0; i<6; i++) {
+                        if(p.barre[i] != NULL) {
+                            SDL_FreeSurface(p.barre[i]);
+                        }
+                    }
+                    free(p.barre);
+                }
+
+                // Free player 2 images
                 for (i=0;i<2;i++)
                 {
-	                for (i=0;i<7;i++)
+	                for (j=0;j<7;j++)
                     {
-		                SDL_FreeSurface(p1.image[i][j]);
+		                if(p1.image[i][j] != NULL) {
+		                    SDL_FreeSurface(p1.image[i][j]);
+		                }
                     }
                 }
-		
-                //minimap
-                //back
-                //enemie
-                SDL_Quit();//ll sdl lkoll 
+                // Free player 2 health bar images
+                if(p1.barre != NULL) {
+                    for(i=0; i<6; i++) {
+                        if(p1.barre[i] != NULL) {
+                            SDL_FreeSurface(p1.barre[i]);
+                        }
+                    }
+                    free(p1.barre);
+                }
+
+                //minimap & background cleanup
+                // librer_backg(m);  // This doesn't exist, safe to comment out
+
+                // Cleanup game background image
+                if(backgame.img != NULL) {
+                    SDL_FreeSurface(backgame.img);
+                }
+
+                // Cleanup score surfaces if they exist
+                if(p.score != NULL) {
+                    SDL_FreeSurface(p.score);
+                }
+                if(p1.score != NULL) {
+                    SDL_FreeSurface(p1.score);
+                }
+
+                SDL_Quit();//ll sdl lkoll
                 return 0 ;
             }

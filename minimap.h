@@ -7,6 +7,7 @@
 #include <SDL/SDL.h>
 #include <SDL/SDL_image.h>
 #include <SDL/SDL_ttf.h>
+#include "perso.h"
 
 /**
 * @struct Minimap
@@ -69,15 +70,15 @@ typedef struct
 }temps;
 
 void initmap(minimap* m);
-void init_background(backg* background);
-void init_perso(perso* perso);
+void init_background_minimap(backg* background);
+// void init_perso(perso* perso);  // Legacy function - see minimap.c
 
 void afficher_background(backg background, SDL_Surface *screen);
-void afficher_perso(perso perso, SDL_Surface *screen);
+// void afficher_perso(perso perso, SDL_Surface *screen);  // Legacy function - see minimap.c
 void afficherminimap (minimap m, SDL_Surface* screen);
 
 SDL_Color GetPixel(SDL_Surface *backg, int x, int y);
-int collisionPP(perso p, SDL_Surface *masque);
+// int collisionPP(perso p, SDL_Surface *masque);  // Legacy function - see minimap.c
 void MAJminimap(int pas, int direc, minimap* m, int redim);
 
 void minuteur(int* deb);
@@ -89,7 +90,7 @@ void afficher_temps(temps t,SDL_Surface* screen);
 void liberer_text(text t);
 
 void liberer_backg(backg b);
-void liberer_perso(perso p);
+// void liberer_perso(perso p);  // Legacy function - see minimap.c
 void liberer_minimap(minimap m);
 
 //Tâche en Blanc

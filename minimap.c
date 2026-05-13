@@ -31,11 +31,11 @@ void initmap(minimap* m)
 }
 
 /**
-* @brief Pour initialiser le background.
-* @param bachg pour background.
-* @return Nothing
-*/
-void init_background(backg* backg)
+ * @brief Pour initialiser le background.
+ * @param bachg pour background.
+ * @return Nothing
+ */
+void init_background_minimap(backg* backg)
 {
 	backg->img = IMG_Load("Ressources/background_2.png");
 	if (backg->img == NULL)
@@ -56,10 +56,12 @@ void init_background(backg* backg)
 }
 
 /**
-* @brief Pour initialiser le personnage.
-* @param perso pour personnage.
-* @return Nothing
-*/
+ * @brief Pour initialiser le personnage.
+ * @param perso pour personnage.
+ * @return Nothing
+ * @deprecated Legacy function - use perso.h functions instead
+ */
+/*
 void init_perso(perso* perso)
 {
 	perso->img = IMG_Load("Ressources/perso.png");
@@ -73,16 +75,19 @@ void init_perso(perso* perso)
 	perso->pos.h = 144;
 	perso->pos.w = 144;	
 }
+*/
 
 void afficher_background(backg background, SDL_Surface* screen)
 {
 	SDL_BlitSurface(background.img, NULL, screen, &background.pos);
 }
 
+/*
 void afficher_perso(perso perso, SDL_Surface* screen)
 {
 	SDL_BlitSurface(perso.img, NULL, screen, &perso.pos);
 }
+*/
 
 void afficherminimap (minimap m, SDL_Surface* screen)
 {
@@ -107,6 +112,7 @@ SDL_Color GetPixel(SDL_Surface* backg, int x, int y)
     return (color);
 }
 
+/*
 int collisionPP(perso p, SDL_Surface *masque)
 {
     SDL_Color test, couleurnoir = {0, 0, 0};
@@ -138,6 +144,7 @@ int collisionPP(perso p, SDL_Surface *masque)
     }
     return collision;
 }
+*/
 
 void MAJminimap(int pas, int direc, minimap* m, int redim)
 {
@@ -236,10 +243,12 @@ void liberer_backg(backg b)
 	SDL_FreeSurface(b.masque);
 }
 
+/*
 void liberer_perso(perso p)
 {
 	SDL_FreeSurface(p.img);
 }
+*/
 
 void liberer_minimap(minimap m)
 {	
