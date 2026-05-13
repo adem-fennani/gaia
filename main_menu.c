@@ -1,13 +1,27 @@
 #include "menu.h"
 #include "perso.h"
 #include "minimap.h"
+#include <stdbool.h>
 
+static SDL_Surface *screen = NULL;
+static image background, B_play, B_play1, B_settings, B_settings1, B_quit, B_quit1, settings, slayed, exits, exits1;
+static image backgame;
+static SDL_Rect pos_plus, pos_moin;
+static minimap m;
+static temps t;
+static perso p, p1;
+static Mix_Music *music = NULL;
+static Mix_Chunk *son = NULL;
+static SDL_Event event;
+static int done = 1, n = 0;
+static int k = 0, etat = 0, s = 0, v = 64, counterr = 0;
+static int count_p = 0, dep = 0, acc = 0, posy = 0, count_p1 = 0, dep1 = 0, acc1 = 0, posy1 = 0;
+static char score[20];
+static char score1[20];
+static Uint32 dt = 0, t_prev = 0;
 
-int main()
+bool init_engine()
 {
-//variables de main menu
-	SDL_Surface *screen= NULL; 
-	image background,B_play,B_play1, B_settings,B_settings1, B_quit,B_quit1, settings,slayed,exits,exits1;
 	// Zero-initialize all image structures
 	memset(&background, 0, sizeof(image));
 	memset(&B_play, 0, sizeof(image));
@@ -20,42 +34,19 @@ int main()
 	memset(&slayed, 0, sizeof(image));
 	memset(&exits, 0, sizeof(image));
 	memset(&exits1, 0, sizeof(image));
-	SDL_Rect pos_plus,pos_moin;
-	int i;
-	//char animation[50];//bech n7oto fih asem lta3 image 5ater fil animation kolmara yetbadel el esem 
-	
-//variables du perso
-perso p, p1;
 // Zero-initialize the perso structs to avoid garbage values
 memset(&p, 0, sizeof(perso));
 memset(&p1, 0, sizeof(perso));
-printf("DEBUG: Creating game background surface...\n");
-fflush(stdout);
-image backgame;
 memset(&backgame, 0, sizeof(image));
-    // TODO: Niv1.png appears to be corrupted (libpng CRC error)
-    // For now, creating a dummy surface to test the rest of the code
-    backgame.img = SDL_CreateRGBSurface(0, 1150, 650, 32, 0, 0, 0, 0);
-    if(backgame.img == NULL) {
-        printf("ERROR: Failed to create backgame surface\n");
-        fflush(stdout);
-    }
-    backgame.pos.x=0;
-    backgame.pos.y=0;
-    backgame.pos.w=1150;
-    backgame.pos.h=650;
-    
-//variables du mini map
-	minimap m;
-	temps t;
-	// Zero-initialize minimap and temps structs
-	memset(&m, 0, sizeof(minimap));
-	memset(&t, 0, sizeof(temps));
-//variables du back
-//variables du enemie
-    
+memset(&m, 0, sizeof(minimap));
+memset(&t, 0, sizeof(temps));
+
 //Initialize SDL first - MUST happen before using any SDL functions
-	SDL_Init(SDL_INIT_EVERYTHING);
+	if(SDL_Init(SDL_INIT_EVERYTHING) != 0)
+	{
+		printf("FAIL SDL INIT %s\n", SDL_GetError());
+		return false;
+	}
 
 //initial video
 	putenv("SDL_VIDEO_CENTRED=1=");
@@ -73,7 +64,7 @@ memset(&backgame, 0, sizeof(image));
 	if( screen == NULL )
     {
         printf( "Can't set video mode: %s \n", SDL_GetError( ) );
-    	return EXIT_FAILURE;
+    	return false;
 	}
 
 // sound - initialize with optimized settings for SDL 1.2
@@ -82,7 +73,30 @@ memset(&backgame, 0, sizeof(image));
 	{
 		printf("FAIL AUDIO %s\n",Mix_GetError());
 	}
-	Mix_Music *music;
+
+printf("DEBUG: Initializing TTF...\n");
+fflush(stdout);
+TTF_Init();
+
+    return true;
+}
+
+void load_game_resources()
+{
+printf("DEBUG: Creating game background surface...\n");
+fflush(stdout);
+    // TODO: Niv1.png appears to be corrupted (libpng CRC error)
+    // For now, creating a dummy surface to test the rest of the code
+    backgame.img = SDL_CreateRGBSurface(0, 1150, 650, 32, 0, 0, 0, 0);
+    if(backgame.img == NULL) {
+        printf("ERROR: Failed to create backgame surface\n");
+        fflush(stdout);
+    }
+    backgame.pos.x=0;
+    backgame.pos.y=0;
+    backgame.pos.w=1150;
+    backgame.pos.h=650;
+
 	music=Mix_LoadMUS("music.mp3");//load tha music
 	if(music == NULL) {
 		printf("FAIL MUSIC LOAD %s\n", Mix_GetError());
@@ -130,9 +144,6 @@ fflush(stdout);
     pos_plus.h=34;
     
 //init perso
-printf("DEBUG: Initializing TTF...\n");
-fflush(stdout);
-TTF_Init();
 printf("DEBUG: Initializing perso...\n");
 fflush(stdout);
 initPerso(&p);
@@ -149,23 +160,27 @@ fflush(stdout);
 	init_temps(&t);
 printf("DEBUG: Setup complete, entering main loop...\n");
 fflush(stdout);
-//event (souris ou clavier)
-	SDL_Event event;//evenment 
-	int done=1 , n=0;
+
 	//done::: de boucle ken 1 lo3ba te5dem ken 0 means exit
 	//s::: hiya tmathel affichage mta3 settings 
 	//v::: hiya volume de music
-	int k=0,etat=0,s=0,v=64,counterr=0;
+
 	//etat::: nesta3emlouh bech na3emlo test fi ena background mawjoudin ken fi (menu0,play1,setting2,credits3,achivements4)
 	//k::: designe le choix selectionnee mta3 menu 
 	
-// perso
-int count_p=0 ,dep=0, acc=0, posy=p.pos_background.y,count_p1=0 ,dep1=0, acc1=0, posy1=p1.pos_background.y,j;
-char score[20];
-char score1[20];
+posy = p.pos_background.y;
+posy1 = p1.pos_background.y;
 
-Uint32 dt, t_prev;
+done = 1;
+etat = 0;
+k = 0;
+s = 0;
+v = 64;
+counterr = 0;
+}
 
+void run_game_loop()
+{
 while(done)
 {
     dt=SDL_GetTicks()-t_prev;
