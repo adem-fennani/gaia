@@ -83,7 +83,7 @@ memset(&backgame, 0, sizeof(image));
 		printf("FAIL AUDIO %s\n",Mix_GetError());
 	}
 	Mix_Music *music;
-	music=Mix_LoadMUS("music.mp3");//load tha music
+	music=Mix_LoadMUS("assets/audio/music.mp3");//load tha music
 	if(music == NULL) {
 		printf("FAIL MUSIC LOAD %s\n", Mix_GetError());
 	}
@@ -92,7 +92,7 @@ memset(&backgame, 0, sizeof(image));
 //sound bref - use -1 for all channels, not channel 1
 	Mix_Volume(-1, MIX_MAX_VOLUME/3);  // Start with lower volume
 	Mix_Chunk *son;
-	son = Mix_LoadWAV("mouseclick.wav");
+	son = Mix_LoadWAV("assets/audio/mouseclick.wav");
 	if(son == NULL) {
 		printf("FAIL SOUND LOAD %s\n", Mix_GetError());
 	}
