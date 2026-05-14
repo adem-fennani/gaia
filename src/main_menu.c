@@ -104,7 +104,7 @@ fflush(stdout);
     backgame.pos.w=1150;
     backgame.pos.h=650;
 
-	music=Mix_LoadMUS("music.mp3");//load tha music
+	music=Mix_LoadMUS("assets/audio/music.mp3");//load tha music
 	if(music == NULL) {
 		printf("FAIL MUSIC LOAD %s\n", Mix_GetError());
 	}
@@ -112,7 +112,7 @@ fflush(stdout);
 	
 //sound bref - use -1 for all channels, not channel 1
 	Mix_Volume(-1, MIX_MAX_VOLUME/3);  // Start with lower volume
-	son = Mix_LoadWAV("mouseclick.wav");
+	son = Mix_LoadWAV("assets/audio/mouseclick.wav");
 	if(son == NULL) {
 		printf("FAIL SOUND LOAD %s\n", Mix_GetError());
 	} else {

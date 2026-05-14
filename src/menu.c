@@ -1,7 +1,8 @@
 #include "menu.h"
+#include "utils.h"
 void init_background(image *background,char *nom)
 {
-background->img=IMG_Load(nom);
+background->img=load_image_safe(nom);
 background->pos.x=0;
 background->pos.y=0;
 background->pos.w=1150;
@@ -10,9 +11,9 @@ background->pos.h=650;
 }
 void init_bouton(image *bouton1,char *nom1,image *bouton2,char *nom2,image *bouton3,char *nom3)
 {
-bouton1->img=IMG_Load(nom1);
-bouton2->img=IMG_Load(nom2);
-bouton3->img=IMG_Load(nom3);
+bouton1->img=load_image_safe(nom1);
+bouton2->img=load_image_safe(nom2);
+bouton3->img=load_image_safe(nom3);
 bouton1->pos.x=53;
 bouton2->pos.x=53;
 bouton3->pos.x=53;
@@ -23,14 +24,14 @@ bouton3->pos.y=475;
 }
 void init_volume_slayed(image *bouton_slide,char *nom)
 {
-bouton_slide->img=IMG_Load(nom);
+bouton_slide->img=load_image_safe(nom);
 bouton_slide->pos.x=515;
 bouton_slide->pos.y=222;
 }
 
 void init_retour_bouton(image *retour,char *nom)
 {
-retour->img=IMG_Load(nom);
+retour->img=load_image_safe(nom);
 retour->pos.x=483;
 retour->pos.y=391;
 }

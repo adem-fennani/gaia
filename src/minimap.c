@@ -14,6 +14,7 @@
 #include <SDL/SDL_image.h>
 #include <SDL/SDL_ttf.h>
 #include "minimap.h"
+#include "utils.h"
 
 /**
 * @brief Pour initialiser le minimap.
@@ -22,10 +23,10 @@
 */
 void initmap(minimap* m)
 {
-	m->img = IMG_Load("minimap.png");
+	m->img = load_image_safe("assets/img/minimap.png");
 	m->pos.x = 576;
 	m->pos.y = 20;
-	m->perso_img = IMG_Load("fleche.png");
+	m->perso_img = load_image_safe("assets/img/fleche.png");
 	m->perso_pos.x = 576;
 	m->perso_pos.y = 94;
 }
@@ -37,7 +38,7 @@ void initmap(minimap* m)
  */
 void init_background_minimap(backg* backg)
 {
-	backg->img = IMG_Load("Ressources/background_2.png");
+	backg->img = load_image_safe("assets/img/Ressources/background_2.png");
 	if (backg->img == NULL)
 	{
 		printf("Erreur d'ouverture: %s\n", SDL_GetError());
@@ -45,7 +46,7 @@ void init_background_minimap(backg* backg)
 	}
 	backg->pos.x = 0;
 	backg->pos.y = 0;	
-	backg->masque = IMG_Load("Ressources/masque.png");
+	backg->masque = load_image_safe("assets/img/Ressources/masque.png");
 	if (backg->masque == NULL)
 	{
 		printf("Erreur d'ouverture: %s\n", SDL_GetError());
@@ -64,7 +65,7 @@ void init_background_minimap(backg* backg)
 /*
 void init_perso(perso* perso)
 {
-	perso->img = IMG_Load("Ressources/perso.png");
+	perso->img = load_image_safe("assets/img/Ressources/perso.png");
 	if (perso->img == NULL)
 	{
 		printf("Erreur d'ouverture: %s\n", SDL_GetError());
@@ -198,7 +199,7 @@ int init_text_temps(text* t)
     strcpy(t->txt,"");
     t->pos.x = 20;
     t->pos.y = 20; 
-    testload = charger_font(t, "Ressources/LemonMilk.otf");
+    testload = charger_font(t, "assets/img/Ressources/LemonMilk.otf");
     t->surf = NULL;
     return testload;   
 }
@@ -271,10 +272,10 @@ void quitgame(int * q, tic c)
 
 void init(tic * c)
 {
-  c -> table = IMG_Load("xo/xo.png");
-  c -> t[0] = IMG_Load("xo/x.png");
-  c -> t[1] = IMG_Load("xo/o.png");
-  c -> bg = IMG_Load("xo/white.jpeg");
+  c -> table = load_image_safe("assets/img/Ressources/xo.png");
+  c -> t[0] = load_image_safe("assets/img/Ressources/X.png");
+  c -> t[1] = load_image_safe("assets/img/Ressources/O.png");
+  c -> bg = load_image_safe("assets/img/Ressources/white.jpeg");
   if (c -> t[1] == NULL) printf("Affichage réussi\n");
   for (int i = 0; i < 3; i++)
     for (int j = 0; j < 3; j++) {
@@ -432,4 +433,3 @@ int game(SDL_Surface * screen)
   SDL_Delay(1000);
   return -1;
 }
-
