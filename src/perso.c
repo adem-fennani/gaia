@@ -8,7 +8,7 @@ char pers[50];
     // Load character animation frames
     for(i=0;i<2;i++){
     for(j=0;j<7;j++){
-    sprintf(pers,"perso/image%d-%d.png",i,j);
+    sprintf(pers,"assets/img/perso/image%d-%d.png",i,j);
     // Create dummy surfaces instead of loading potentially corrupted files
     p->image[i][j] = SDL_CreateRGBSurface(0, 100, 100, 32, 0, 0, 0, 0);
     if(p->image[i][j] == NULL) {
@@ -21,7 +21,7 @@ char pers[50];
     // FIX: Allocate space for 6 SDL_Surface pointers (not just one surface!)
     p->barre=(SDL_Surface**)malloc(sizeof(SDL_Surface*) * 6);
     for(i=0;i<6;i++){
-    sprintf(pers,"barre/barre_%d.png",i);
+    sprintf(pers,"assets/img/barre/barre_%d.png",i);
     p->barre[i] = SDL_CreateRGBSurface(0, 50, 50, 32, 0, 0, 0, 0);
     if(p->barre[i] == NULL) {
         printf("Error creating barre surface %d: %s\n", i, SDL_GetError());
@@ -29,7 +29,7 @@ char pers[50];
     }
     printf("DEBUG: initPerso: Health bars created\n");
     fflush(stdout);
-    p->police_score=TTF_OpenFont("Raimen.ttf",40);
+    p->police_score=TTF_OpenFont("assets/fonts/Raimen.ttf",40);
     if(p->police_score == NULL) {
         printf("Error loading font Raimen.ttf: %s\n", TTF_GetError());
     }
@@ -191,7 +191,7 @@ char pers[50];
     // Load character animation frames (use same"perso" folder since perso1 doesn't exist)
     for(i=0;i<2;i++){
     for(j=0;j<7;j++){
-    sprintf(pers,"perso/image%d-%d.png",i,j);  // Use perso folder for player 2 as well
+    sprintf(pers,"assets/img/perso/image%d-%d.png",i,j);  // Use perso folder for player 2 as well
     p->image[i][j] = SDL_CreateRGBSurface(0, 100, 100, 32, 0, 0, 0, 0);
     if(p->image[i][j] == NULL) {
         printf("Error creating perso surface for player 2 %d-%d: %s\n", i, j, SDL_GetError());
@@ -203,7 +203,7 @@ char pers[50];
     // FIX: Allocate space for 6 SDL_Surface pointers (not just one surface!)
     p->barre=(SDL_Surface**)malloc(sizeof(SDL_Surface*) * 6);
     for(i=0;i<6;i++){
-    sprintf(pers,"barre1/barre_%d.png",i);
+    sprintf(pers,"assets/img/barre1/barre_%d.png",i);
     p->barre[i] = SDL_CreateRGBSurface(0, 50, 50, 32, 0, 0, 0, 0);
     if(p->barre[i] == NULL) {
         printf("Error creating barre1 surface %d: %s\n", i, SDL_GetError());
@@ -211,7 +211,7 @@ char pers[50];
     }
     printf("DEBUG: initPerso1: Health bars created\n");
     fflush(stdout);
-    p->police_score=TTF_OpenFont("Raimen.ttf",40);
+    p->police_score=TTF_OpenFont("assets/fonts/Raimen.ttf",40);
     if(p->police_score == NULL) {
         printf("Error loading font Raimen.ttf: %s\n", TTF_GetError());
     }
