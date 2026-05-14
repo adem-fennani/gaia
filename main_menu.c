@@ -105,7 +105,6 @@ fflush(stdout);
 	
 //sound bref - use -1 for all channels, not channel 1
 	Mix_Volume(-1, MIX_MAX_VOLUME/3);  // Start with lower volume
-	Mix_Chunk *son;
 	son = Mix_LoadWAV("mouseclick.wav");
 	if(son == NULL) {
 		printf("FAIL SOUND LOAD %s\n", Mix_GetError());
@@ -723,95 +722,108 @@ while(done)
                         p1.vie=2;
                     }
 
-                    if(p1.iscore/20>130)
-                    {
-                        p1.vie=1;
-                    }
+                     if(p1.iscore/20>130)
+                     {
+                         p1.vie=1;
+                     }
 
-                }//fin while game loop 
+                 }//fin while game loop
+}
 
-                /*lib images
-                for (i=0;i<25;i++){
-                    librer(imgBACK[i]);
-                }
-                */  
-                librer(B_play);
-                librer(B_play1);
-                librer(B_settings);
-                librer(B_settings1);
-                librer(B_quit);
-                librer(B_quit1);
-    
-                librer(settings);
-                librer(slayed);
-                librer(exits);
-                librer(exits1);
-	
-                //lib sounds
-	            Mix_FreeMusic(music); 
-	            Mix_FreeChunk( son); 
-	
-                //perso cleanup
-                TTF_CloseFont(p.police_score);
-                TTF_CloseFont(p1.police_score);
-                TTF_Quit();
+void cleanup_game()
+{
+    int i, j;
+    /*lib images
+    for (i=0;i<25;i++){
+        librer(imgBACK[i]);
+    }
+    */
+    librer(B_play);
+    librer(B_play1);
+    librer(B_settings);
+    librer(B_settings1);
+    librer(B_quit);
+    librer(B_quit1);
 
-                // Free player 1 images
-                for (i=0;i<2;i++)
-                {
-	                for (j=0;j<7;j++)
-                    {
-		                if(p.image[i][j] != NULL) {
-		                    SDL_FreeSurface(p.image[i][j]);
-		                }
-                    }
-                }
-                // Free player 1 health bar images
-                if(p.barre != NULL) {
-                    for(i=0; i<6; i++) {
-                        if(p.barre[i] != NULL) {
-                            SDL_FreeSurface(p.barre[i]);
-                        }
-                    }
-                    free(p.barre);
-                }
+    librer(settings);
+    librer(slayed);
+    librer(exits);
+    librer(exits1);
 
-                // Free player 2 images
-                for (i=0;i<2;i++)
-                {
-	                for (j=0;j<7;j++)
-                    {
-		                if(p1.image[i][j] != NULL) {
-		                    SDL_FreeSurface(p1.image[i][j]);
-		                }
-                    }
-                }
-                // Free player 2 health bar images
-                if(p1.barre != NULL) {
-                    for(i=0; i<6; i++) {
-                        if(p1.barre[i] != NULL) {
-                            SDL_FreeSurface(p1.barre[i]);
-                        }
-                    }
-                    free(p1.barre);
-                }
+    //lib sounds
+    Mix_FreeMusic(music);
+    Mix_FreeChunk(son);
 
-                //minimap & background cleanup
-                // librer_backg(m);  // This doesn't exist, safe to comment out
+    //perso cleanup
+    TTF_CloseFont(p.police_score);
+    TTF_CloseFont(p1.police_score);
+    TTF_Quit();
 
-                // Cleanup game background image
-                if(backgame.img != NULL) {
-                    SDL_FreeSurface(backgame.img);
-                }
-
-                // Cleanup score surfaces if they exist
-                if(p.score != NULL) {
-                    SDL_FreeSurface(p.score);
-                }
-                if(p1.score != NULL) {
-                    SDL_FreeSurface(p1.score);
-                }
-
-                SDL_Quit();//ll sdl lkoll
-                return 0 ;
+    // Free player 1 images
+    for (i=0;i<2;i++)
+    {
+        for (j=0;j<7;j++)
+        {
+            if(p.image[i][j] != NULL) {
+                SDL_FreeSurface(p.image[i][j]);
             }
+        }
+    }
+    // Free player 1 health bar images
+    if(p.barre != NULL) {
+        for(i=0; i<6; i++) {
+            if(p.barre[i] != NULL) {
+                SDL_FreeSurface(p.barre[i]);
+            }
+        }
+        free(p.barre);
+    }
+
+    // Free player 2 images
+    for (i=0;i<2;i++)
+    {
+        for (j=0;j<7;j++)
+        {
+            if(p1.image[i][j] != NULL) {
+                SDL_FreeSurface(p1.image[i][j]);
+            }
+        }
+    }
+    // Free player 2 health bar images
+    if(p1.barre != NULL) {
+        for(i=0; i<6; i++) {
+            if(p1.barre[i] != NULL) {
+                SDL_FreeSurface(p1.barre[i]);
+            }
+        }
+        free(p1.barre);
+    }
+
+    // Cleanup game background image
+    if(backgame.img != NULL) {
+        SDL_FreeSurface(backgame.img);
+    }
+
+    // Cleanup score surfaces if they exist
+    if(p.score != NULL) {
+        SDL_FreeSurface(p.score);
+    }
+    if(p1.score != NULL) {
+        SDL_FreeSurface(p1.score);
+    }
+
+    SDL_Quit();//ll sdl lkoll
+}
+
+int main()
+{
+    if (!init_engine())
+    {
+        return EXIT_FAILURE;
+    }
+
+    load_game_resources();
+    run_game_loop();
+    cleanup_game();
+    return 0;
+}
