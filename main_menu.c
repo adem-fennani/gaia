@@ -753,7 +753,9 @@ void cleanup_game()
 
     //lib sounds
     Mix_FreeMusic(music);
-    Mix_FreeChunk(son);
+    if (son != NULL) {
+        Mix_FreeChunk(son);
+    }
 
     //perso cleanup
     TTF_CloseFont(p.police_score);
