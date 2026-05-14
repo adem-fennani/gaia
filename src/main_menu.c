@@ -1,6 +1,7 @@
 #include "menu.h"
 #include "perso.h"
 #include "minimap.h"
+#include "utils.h"
 
 
 int main()
@@ -92,11 +93,13 @@ memset(&backgame, 0, sizeof(image));
 //sound bref - use -1 for all channels, not channel 1
 	Mix_Volume(-1, MIX_MAX_VOLUME/3);  // Start with lower volume
 	Mix_Chunk *son;
-	son = Mix_LoadWAV("assets/audio/mouseclick.wav");
+	son = load_wav_safe("assets/audio/mouseclick.wav");
 	if(son == NULL) {
 		printf("FAIL SOUND LOAD %s\n", Mix_GetError());
 	}
-	Mix_VolumeChunk(son, MIX_MAX_VOLUME/3);
+	if(son != NULL) {
+		Mix_VolumeChunk(son, MIX_MAX_VOLUME/3);
+	}
 
 //background init
 printf("DEBUG: Skipping menu image loads for now (testing core game)\n");
@@ -273,19 +276,19 @@ while(done)
                     		{
                         		if(k==1)
                     			{
-                    				Mix_PlayChannel(-1,son,0);
+                    				if(son != NULL) { Mix_PlayChannel(-1,son,0); }
                     				etat=1;
                     			}
 
                         		else if (k==2)
                         		{
-                    				Mix_PlayChannel(-1,son,0);
+                    				if(son != NULL) { Mix_PlayChannel(-1,son,0); }
                         				etat=2;
                     			}
 
                         		else if (k==3)
                         		{
-                    				Mix_PlayChannel(-1,son,0);
+                    				if(son != NULL) { Mix_PlayChannel(-1,son,0); }
                     				done=0;//bech yo5rej mel boucle w mil game
                     			}
 
@@ -303,19 +306,19 @@ while(done)
                         {
          			        if (event.button.x>B_play.pos.x && event.button.x<B_play.pos.x+B_play.img->w && event.button.y>B_play.pos.y && event.button.y<B_play.pos.y+B_play.img->h)
                         	{  
-                        	    Mix_PlayChannel(-1,son,0);
+                        	    if(son != NULL) { Mix_PlayChannel(-1,son,0); }
                           	    etat=1;                            			 
                         	}
 
          			        if (event.button.x>B_settings.pos.x && event.button.x<B_settings.pos.x+B_settings.img->w && event.button.y>B_settings.pos.y && event.button.y<B_settings.pos.y+B_settings.img->h)
                         	{  
-                        	    Mix_PlayChannel(-1,son,0);
+                        	    if(son != NULL) { Mix_PlayChannel(-1,son,0); }
                           	    etat=2;                            			 
                             }
 
                         	else if (event.button.x>B_quit.pos.x && event.button.x<B_quit.pos.x+B_quit.img->w && event.button.y>B_quit.pos.y && event.button.y<B_quit.pos.y+B_quit.img->h)//exit
                         	{
-                                Mix_PlayChannel(-1,son,0);
+                                if(son != NULL) { Mix_PlayChannel(-1,son,0); }
                             	done=0; //exit                            		
                         	}
                         }   //if
@@ -325,19 +328,19 @@ while(done)
                     {                    
                         if (event.button.x>B_play.pos.x && event.button.x<B_play.pos.x+B_play.img->w && event.button.y>B_play.pos.y && event.button.y<B_play.pos.y+B_play.img->h) //play
                         {
-                            Mix_PlayChannel(-1,son,0);
+                            if(son != NULL) { Mix_PlayChannel(-1,son,0); }
                             k=1;
                         }
 
                         else if (event.button.x>B_settings.pos.x && event.button.x<B_settings.pos.x+B_settings.img->w && event.button.y>B_settings.pos.y && event.button.y<B_settings.pos.y+B_settings.img->h)   //sittings
                         {
-                            Mix_PlayChannel(-1,son,0);
+                            if(son != NULL) { Mix_PlayChannel(-1,son,0); }
                             k=2;
                         }
 
                         else if (event.button.x>B_quit.pos.x && event.button.x<B_quit.pos.x+B_quit.img->w && event.button.y>B_quit.pos.y && event.button.y<B_quit.pos.y+B_quit.img->h)   //quit
                         {
-                            Mix_PlayChannel(-1,son,0);
+                            if(son != NULL) { Mix_PlayChannel(-1,son,0); }
                             k=3;
                         }
 
@@ -436,7 +439,7 @@ while(done)
                        
                             else if (event.button.x>exits.pos.x && event.button.x<exits.pos.x+exits.img->w && event.button.y>exits.pos.y && event.button.y<exits.pos.y+exits.img->h)
                             {
-                                Mix_PlayChannel(-1,son,0);
+                                if(son != NULL) { Mix_PlayChannel(-1,son,0); }
                                 etat=0;
                             }
 
@@ -734,7 +737,9 @@ while(done)
 	
                 //lib sounds
 	            Mix_FreeMusic(music); 
-	            Mix_FreeChunk( son); 
+	            if(son != NULL) {
+	            Mix_FreeChunk( son);
+	        } 
 	
                 //perso cleanup
                 TTF_CloseFont(p.police_score);
