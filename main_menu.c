@@ -108,8 +108,9 @@ fflush(stdout);
 	son = Mix_LoadWAV("mouseclick.wav");
 	if(son == NULL) {
 		printf("FAIL SOUND LOAD %s\n", Mix_GetError());
+	} else {
+		Mix_VolumeChunk(son, MIX_MAX_VOLUME/3);
 	}
-	Mix_VolumeChunk(son, MIX_MAX_VOLUME/3);
 
 //background init
 printf("DEBUG: Skipping menu image loads for now (testing core game)\n");
