@@ -20,6 +20,13 @@ static char score[20];
 static char score1[20];
 static Uint32 dt = 0, t_prev = 0;
 
+static void play_click_sound()
+{
+    if (son != NULL) {
+        Mix_PlayChannel(-1, son, 0);
+    }
+}
+
 bool init_engine()
 {
 	// Zero-initialize all image structures
@@ -288,19 +295,19 @@ while(done)
                     		{
                         		if(k==1)
                     			{
-                    				Mix_PlayChannel(-1,son,0);
+                    				play_click_sound();
                     				etat=1;
                     			}
 
                         		else if (k==2)
                         		{
-                    				Mix_PlayChannel(-1,son,0);
-                        				etat=2;
+                    				play_click_sound();
+                         				etat=2;
                     			}
 
                         		else if (k==3)
                         		{
-                    				Mix_PlayChannel(-1,son,0);
+                    				play_click_sound();
                     				done=0;//bech yo5rej mel boucle w mil game
                     			}
 
@@ -318,21 +325,21 @@ while(done)
                         {
          			        if (event.button.x>B_play.pos.x && event.button.x<B_play.pos.x+B_play.img->w && event.button.y>B_play.pos.y && event.button.y<B_play.pos.y+B_play.img->h)
                         	{  
-                        	    Mix_PlayChannel(-1,son,0);
-                          	    etat=1;                            			 
+                        	    play_click_sound();
+                           	    etat=1;                            			 
                         	}
 
          			        if (event.button.x>B_settings.pos.x && event.button.x<B_settings.pos.x+B_settings.img->w && event.button.y>B_settings.pos.y && event.button.y<B_settings.pos.y+B_settings.img->h)
                         	{  
-                        	    Mix_PlayChannel(-1,son,0);
-                          	    etat=2;                            			 
-                            }
+                        	    play_click_sound();
+                           	    etat=2;                            			 
+                             }
 
                         	else if (event.button.x>B_quit.pos.x && event.button.x<B_quit.pos.x+B_quit.img->w && event.button.y>B_quit.pos.y && event.button.y<B_quit.pos.y+B_quit.img->h)//exit
                         	{
-                                Mix_PlayChannel(-1,son,0);
-                            	done=0; //exit                            		
-                        	}
+                                play_click_sound();
+                             	done=0; //exit                            		
+                         	}
                         }   //if
                     }   //fin case SDL_MOUSEBUTTONDOWN
 
@@ -340,19 +347,19 @@ while(done)
                     {                    
                         if (event.button.x>B_play.pos.x && event.button.x<B_play.pos.x+B_play.img->w && event.button.y>B_play.pos.y && event.button.y<B_play.pos.y+B_play.img->h) //play
                         {
-                            Mix_PlayChannel(-1,son,0);
+                            play_click_sound();
                             k=1;
                         }
 
                         else if (event.button.x>B_settings.pos.x && event.button.x<B_settings.pos.x+B_settings.img->w && event.button.y>B_settings.pos.y && event.button.y<B_settings.pos.y+B_settings.img->h)   //sittings
                         {
-                            Mix_PlayChannel(-1,son,0);
+                            play_click_sound();
                             k=2;
                         }
 
                         else if (event.button.x>B_quit.pos.x && event.button.x<B_quit.pos.x+B_quit.img->w && event.button.y>B_quit.pos.y && event.button.y<B_quit.pos.y+B_quit.img->h)   //quit
                         {
-                            Mix_PlayChannel(-1,son,0);
+                            play_click_sound();
                             k=3;
                         }
 
@@ -451,7 +458,7 @@ while(done)
                        
                             else if (event.button.x>exits.pos.x && event.button.x<exits.pos.x+exits.img->w && event.button.y>exits.pos.y && event.button.y<exits.pos.y+exits.img->h)
                             {
-                                Mix_PlayChannel(-1,son,0);
+                                play_click_sound();
                                 etat=0;
                             }
 
