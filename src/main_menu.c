@@ -1,14 +1,34 @@
 #include "menu.h"
 #include "perso.h"
 #include "minimap.h"
-#include "utils.h"
+#include <stdbool.h>
 
+static SDL_Surface *screen = NULL;
+static image background, B_play, B_play1, B_settings, B_settings1, B_quit, B_quit1, settings, slayed, exits, exits1;
+static image backgame;
+static SDL_Rect pos_plus, pos_moin;
+static minimap m;
+static temps t;
+static perso p, p1;
+static Mix_Music *music = NULL;
+static Mix_Chunk *son = NULL;
+static SDL_Event event;
+static int done = 1, n = 0;
+static int k = 0, etat = 0, s = 0, v = 64, counterr = 0;
+static int count_p = 0, dep = 0, acc = 0, posy = 0, count_p1 = 0, dep1 = 0, acc1 = 0, posy1 = 0;
+static char score[20];
+static char score1[20];
+static Uint32 dt = 0, t_prev = 0;
 
-int main()
+static void play_click_sound()
 {
-//variables de main menu
-	SDL_Surface *screen= NULL; 
-	image background,B_play,B_play1, B_settings,B_settings1, B_quit,B_quit1, settings,slayed,exits,exits1;
+    if (son != NULL) {
+        Mix_PlayChannel(-1, son, 0);
+    }
+}
+
+bool init_engine()
+{
 	// Zero-initialize all image structures
 	memset(&background, 0, sizeof(image));
 	memset(&B_play, 0, sizeof(image));
@@ -21,42 +41,19 @@ int main()
 	memset(&slayed, 0, sizeof(image));
 	memset(&exits, 0, sizeof(image));
 	memset(&exits1, 0, sizeof(image));
-	SDL_Rect pos_plus,pos_moin;
-	int i;
-	//char animation[50];//bech n7oto fih asem lta3 image 5ater fil animation kolmara yetbadel el esem 
-	
-//variables du perso
-perso p, p1;
 // Zero-initialize the perso structs to avoid garbage values
 memset(&p, 0, sizeof(perso));
 memset(&p1, 0, sizeof(perso));
-printf("DEBUG: Creating game background surface...\n");
-fflush(stdout);
-image backgame;
 memset(&backgame, 0, sizeof(image));
-    // TODO: Niv1.png appears to be corrupted (libpng CRC error)
-    // For now, creating a dummy surface to test the rest of the code
-    backgame.img = SDL_CreateRGBSurface(0, 1150, 650, 32, 0, 0, 0, 0);
-    if(backgame.img == NULL) {
-        printf("ERROR: Failed to create backgame surface\n");
-        fflush(stdout);
-    }
-    backgame.pos.x=0;
-    backgame.pos.y=0;
-    backgame.pos.w=1150;
-    backgame.pos.h=650;
-    
-//variables du mini map
-	minimap m;
-	temps t;
-	// Zero-initialize minimap and temps structs
-	memset(&m, 0, sizeof(minimap));
-	memset(&t, 0, sizeof(temps));
-//variables du back
-//variables du enemie
-    
+memset(&m, 0, sizeof(minimap));
+memset(&t, 0, sizeof(temps));
+
 //Initialize SDL first - MUST happen before using any SDL functions
-	SDL_Init(SDL_INIT_EVERYTHING);
+	if(SDL_Init(SDL_INIT_EVERYTHING) != 0)
+	{
+		printf("FAIL SDL INIT %s\n", SDL_GetError());
+		return false;
+	}
 
 //initial video
 	putenv("SDL_VIDEO_CENTRED=1=");
@@ -74,7 +71,7 @@ memset(&backgame, 0, sizeof(image));
 	if( screen == NULL )
     {
         printf( "Can't set video mode: %s \n", SDL_GetError( ) );
-    	return EXIT_FAILURE;
+    	return false;
 	}
 
 // sound - initialize with optimized settings for SDL 1.2
@@ -83,7 +80,30 @@ memset(&backgame, 0, sizeof(image));
 	{
 		printf("FAIL AUDIO %s\n",Mix_GetError());
 	}
-	Mix_Music *music;
+
+printf("DEBUG: Initializing TTF...\n");
+fflush(stdout);
+TTF_Init();
+
+    return true;
+}
+
+void load_game_resources()
+{
+printf("DEBUG: Creating game background surface...\n");
+fflush(stdout);
+    // TODO: Niv1.png appears to be corrupted (libpng CRC error)
+    // For now, creating a dummy surface to test the rest of the code
+    backgame.img = SDL_CreateRGBSurface(0, 1150, 650, 32, 0, 0, 0, 0);
+    if(backgame.img == NULL) {
+        printf("ERROR: Failed to create backgame surface\n");
+        fflush(stdout);
+    }
+    backgame.pos.x=0;
+    backgame.pos.y=0;
+    backgame.pos.w=1150;
+    backgame.pos.h=650;
+
 	music=Mix_LoadMUS("assets/audio/music.mp3");//load tha music
 	if(music == NULL) {
 		printf("FAIL MUSIC LOAD %s\n", Mix_GetError());
@@ -92,12 +112,10 @@ memset(&backgame, 0, sizeof(image));
 	
 //sound bref - use -1 for all channels, not channel 1
 	Mix_Volume(-1, MIX_MAX_VOLUME/3);  // Start with lower volume
-	Mix_Chunk *son;
-	son = load_wav_safe("assets/audio/mouseclick.wav");
+	son = Mix_LoadWAV("assets/audio/mouseclick.wav");
 	if(son == NULL) {
 		printf("FAIL SOUND LOAD %s\n", Mix_GetError());
-	}
-	if(son != NULL) {
+	} else {
 		Mix_VolumeChunk(son, MIX_MAX_VOLUME/3);
 	}
 
@@ -133,9 +151,6 @@ fflush(stdout);
     pos_plus.h=34;
     
 //init perso
-printf("DEBUG: Initializing TTF...\n");
-fflush(stdout);
-TTF_Init();
 printf("DEBUG: Initializing perso...\n");
 fflush(stdout);
 initPerso(&p);
@@ -152,23 +167,27 @@ fflush(stdout);
 	init_temps(&t);
 printf("DEBUG: Setup complete, entering main loop...\n");
 fflush(stdout);
-//event (souris ou clavier)
-	SDL_Event event;//evenment 
-	int done=1 , n=0;
+
 	//done::: de boucle ken 1 lo3ba te5dem ken 0 means exit
 	//s::: hiya tmathel affichage mta3 settings 
 	//v::: hiya volume de music
-	int k=0,etat=0,s=0,v=64,counterr=0;
+
 	//etat::: nesta3emlouh bech na3emlo test fi ena background mawjoudin ken fi (menu0,play1,setting2,credits3,achivements4)
 	//k::: designe le choix selectionnee mta3 menu 
 	
-// perso
-int count_p=0 ,dep=0, acc=0, posy=p.pos_background.y,count_p1=0 ,dep1=0, acc1=0, posy1=p1.pos_background.y,j;
-char score[20];
-char score1[20];
+posy = p.pos_background.y;
+posy1 = p1.pos_background.y;
 
-Uint32 dt, t_prev;
+done = 1;
+etat = 0;
+k = 0;
+s = 0;
+v = 64;
+counterr = 0;
+}
 
+void run_game_loop()
+{
 while(done)
 {
     dt=SDL_GetTicks()-t_prev;
@@ -276,19 +295,19 @@ while(done)
                     		{
                         		if(k==1)
                     			{
-                    				if(son != NULL) { Mix_PlayChannel(-1,son,0); }
+                    				play_click_sound();
                     				etat=1;
                     			}
 
                         		else if (k==2)
                         		{
-                    				if(son != NULL) { Mix_PlayChannel(-1,son,0); }
-                        				etat=2;
+                    				play_click_sound();
+                         				etat=2;
                     			}
 
                         		else if (k==3)
                         		{
-                    				if(son != NULL) { Mix_PlayChannel(-1,son,0); }
+                    				play_click_sound();
                     				done=0;//bech yo5rej mel boucle w mil game
                     			}
 
@@ -306,21 +325,21 @@ while(done)
                         {
          			        if (event.button.x>B_play.pos.x && event.button.x<B_play.pos.x+B_play.img->w && event.button.y>B_play.pos.y && event.button.y<B_play.pos.y+B_play.img->h)
                         	{  
-                        	    if(son != NULL) { Mix_PlayChannel(-1,son,0); }
-                          	    etat=1;                            			 
+                        	    play_click_sound();
+                           	    etat=1;                            			 
                         	}
 
          			        if (event.button.x>B_settings.pos.x && event.button.x<B_settings.pos.x+B_settings.img->w && event.button.y>B_settings.pos.y && event.button.y<B_settings.pos.y+B_settings.img->h)
                         	{  
-                        	    if(son != NULL) { Mix_PlayChannel(-1,son,0); }
-                          	    etat=2;                            			 
-                            }
+                        	    play_click_sound();
+                           	    etat=2;                            			 
+                             }
 
                         	else if (event.button.x>B_quit.pos.x && event.button.x<B_quit.pos.x+B_quit.img->w && event.button.y>B_quit.pos.y && event.button.y<B_quit.pos.y+B_quit.img->h)//exit
                         	{
-                                if(son != NULL) { Mix_PlayChannel(-1,son,0); }
-                            	done=0; //exit                            		
-                        	}
+                                play_click_sound();
+                             	done=0; //exit                            		
+                         	}
                         }   //if
                     }   //fin case SDL_MOUSEBUTTONDOWN
 
@@ -328,19 +347,19 @@ while(done)
                     {                    
                         if (event.button.x>B_play.pos.x && event.button.x<B_play.pos.x+B_play.img->w && event.button.y>B_play.pos.y && event.button.y<B_play.pos.y+B_play.img->h) //play
                         {
-                            if(son != NULL) { Mix_PlayChannel(-1,son,0); }
+                            play_click_sound();
                             k=1;
                         }
 
                         else if (event.button.x>B_settings.pos.x && event.button.x<B_settings.pos.x+B_settings.img->w && event.button.y>B_settings.pos.y && event.button.y<B_settings.pos.y+B_settings.img->h)   //sittings
                         {
-                            if(son != NULL) { Mix_PlayChannel(-1,son,0); }
+                            play_click_sound();
                             k=2;
                         }
 
                         else if (event.button.x>B_quit.pos.x && event.button.x<B_quit.pos.x+B_quit.img->w && event.button.y>B_quit.pos.y && event.button.y<B_quit.pos.y+B_quit.img->h)   //quit
                         {
-                            if(son != NULL) { Mix_PlayChannel(-1,son,0); }
+                            play_click_sound();
                             k=3;
                         }
 
@@ -439,7 +458,7 @@ while(done)
                        
                             else if (event.button.x>exits.pos.x && event.button.x<exits.pos.x+exits.img->w && event.button.y>exits.pos.y && event.button.y<exits.pos.y+exits.img->h)
                             {
-                                if(son != NULL) { Mix_PlayChannel(-1,son,0); }
+                                play_click_sound();
                                 etat=0;
                             }
 
@@ -711,97 +730,110 @@ while(done)
                         p1.vie=2;
                     }
 
-                    if(p1.iscore/20>130)
-                    {
-                        p1.vie=1;
-                    }
+                     if(p1.iscore/20>130)
+                     {
+                         p1.vie=1;
+                     }
 
-                }//fin while game loop 
+                 }//fin while game loop
+}
 
-                /*lib images
-                for (i=0;i<25;i++){
-                    librer(imgBACK[i]);
-                }
-                */  
-                librer(B_play);
-                librer(B_play1);
-                librer(B_settings);
-                librer(B_settings1);
-                librer(B_quit);
-                librer(B_quit1);
-    
-                librer(settings);
-                librer(slayed);
-                librer(exits);
-                librer(exits1);
-	
-                //lib sounds
-	            Mix_FreeMusic(music); 
-	            if(son != NULL) {
-	            Mix_FreeChunk( son);
-	        } 
-	
-                //perso cleanup
-                TTF_CloseFont(p.police_score);
-                TTF_CloseFont(p1.police_score);
-                TTF_Quit();
+void cleanup_game()
+{
+    int i, j;
+    /*lib images
+    for (i=0;i<25;i++){
+        librer(imgBACK[i]);
+    }
+    */
+    librer(B_play);
+    librer(B_play1);
+    librer(B_settings);
+    librer(B_settings1);
+    librer(B_quit);
+    librer(B_quit1);
 
-                // Free player 1 images
-                for (i=0;i<2;i++)
-                {
-	                for (j=0;j<7;j++)
-                    {
-		                if(p.image[i][j] != NULL) {
-		                    SDL_FreeSurface(p.image[i][j]);
-		                }
-                    }
-                }
-                // Free player 1 health bar images
-                if(p.barre != NULL) {
-                    for(i=0; i<6; i++) {
-                        if(p.barre[i] != NULL) {
-                            SDL_FreeSurface(p.barre[i]);
-                        }
-                    }
-                    free(p.barre);
-                }
+    librer(settings);
+    librer(slayed);
+    librer(exits);
+    librer(exits1);
 
-                // Free player 2 images
-                for (i=0;i<2;i++)
-                {
-	                for (j=0;j<7;j++)
-                    {
-		                if(p1.image[i][j] != NULL) {
-		                    SDL_FreeSurface(p1.image[i][j]);
-		                }
-                    }
-                }
-                // Free player 2 health bar images
-                if(p1.barre != NULL) {
-                    for(i=0; i<6; i++) {
-                        if(p1.barre[i] != NULL) {
-                            SDL_FreeSurface(p1.barre[i]);
-                        }
-                    }
-                    free(p1.barre);
-                }
+    //lib sounds
+    Mix_FreeMusic(music);
+    if (son != NULL) {
+        Mix_FreeChunk(son);
+    }
 
-                //minimap & background cleanup
-                // librer_backg(m);  // This doesn't exist, safe to comment out
+    //perso cleanup
+    TTF_CloseFont(p.police_score);
+    TTF_CloseFont(p1.police_score);
+    TTF_Quit();
 
-                // Cleanup game background image
-                if(backgame.img != NULL) {
-                    SDL_FreeSurface(backgame.img);
-                }
-
-                // Cleanup score surfaces if they exist
-                if(p.score != NULL) {
-                    SDL_FreeSurface(p.score);
-                }
-                if(p1.score != NULL) {
-                    SDL_FreeSurface(p1.score);
-                }
-
-                SDL_Quit();//ll sdl lkoll
-                return 0 ;
+    // Free player 1 images
+    for (i=0;i<2;i++)
+    {
+        for (j=0;j<7;j++)
+        {
+            if(p.image[i][j] != NULL) {
+                SDL_FreeSurface(p.image[i][j]);
             }
+        }
+    }
+    // Free player 1 health bar images
+    if(p.barre != NULL) {
+        for(i=0; i<6; i++) {
+            if(p.barre[i] != NULL) {
+                SDL_FreeSurface(p.barre[i]);
+            }
+        }
+        free(p.barre);
+    }
+
+    // Free player 2 images
+    for (i=0;i<2;i++)
+    {
+        for (j=0;j<7;j++)
+        {
+            if(p1.image[i][j] != NULL) {
+                SDL_FreeSurface(p1.image[i][j]);
+            }
+        }
+    }
+    // Free player 2 health bar images
+    if(p1.barre != NULL) {
+        for(i=0; i<6; i++) {
+            if(p1.barre[i] != NULL) {
+                SDL_FreeSurface(p1.barre[i]);
+            }
+        }
+        free(p1.barre);
+    }
+
+    // Cleanup game background image
+    if(backgame.img != NULL) {
+        SDL_FreeSurface(backgame.img);
+    }
+
+    // Cleanup score surfaces if they exist
+    if(p.score != NULL) {
+        SDL_FreeSurface(p.score);
+    }
+    if(p1.score != NULL) {
+        SDL_FreeSurface(p1.score);
+    }
+
+    SDL_Quit();//ll sdl lkoll
+}
+
+int main()
+{
+    if (!init_engine())
+    {
+        return EXIT_FAILURE;
+    }
+
+    load_game_resources();
+    run_game_loop();
+    cleanup_game();
+    return 0;
+}
