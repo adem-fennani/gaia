@@ -1,9 +1,12 @@
-# Object files
+# Build artifacts & Executables
+build/
 *.o
-# Executables
 pro
-# Clion / IDEA files
+
+# IDE & Configuration files (Locally grouped)
 .idea/
 cmake-build-*/
-CMakeLists.txt
-/TODO.md
+.config/
+
+# Caches
+.cache/

@@ -4,7 +4,7 @@
 #include <SDL/SDL.h>
 #include <SDL/SDL_mixer.h>
 
-SDL_Surface* load_image_safe(const char* path);
-Mix_Chunk* load_wav_safe(const char* path);
+SDL_Surface *load_image_safe(const char *path);
+Mix_Chunk *load_wav_safe(const char *path);
 
 #endif

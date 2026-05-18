@@ -2,14 +2,14 @@
  * @file minimap.c
  * @brief Testing Program.
  * @author Adem FENNANI
- * @version 4.0
+ * @version 3.0
  * @date May 09, 2023
  *
  * Testing program for background scrollilng
  *
  */
-#include "../include/minimap.h"
-#include "../include/utils.h"
+#include "minimap.h"
+#include "../utils.h"
 #include <SDL/SDL.h>
 #include <SDL/SDL_image.h>
 #include <SDL/SDL_ttf.h>
@@ -22,10 +22,10 @@
  * @return Nothing
  */
 void initmap(minimap *m) {
-  m->img = load_image_safe("assets/img/minimap.png");
+  m->img = load_image_safe("Ressources/minimap.png");
   m->pos.x = 576;
   m->pos.y = 20;
-  m->perso_img = load_image_safe("assets/img/fleche.png");
+  m->perso_img = load_image_safe("Ressources/fleche.png");
   m->perso_pos.x = 576;
   m->perso_pos.y = 94;
 }
@@ -35,15 +35,15 @@ void initmap(minimap *m) {
  * @param bachg pour background.
  * @return Nothing
  */
-void init_background_minimap(backg *backg) {
-  backg->img = load_image_safe("assets/img/Ressources/background_2.png");
+void init_background(backg *backg) {
+  backg->img = load_image_safe("Ressources/background_2.png");
   if (backg->img == NULL) {
     printf("Erreur d'ouverture: %s\n", SDL_GetError());
     return;
   }
   backg->pos.x = 0;
   backg->pos.y = 0;
-  backg->masque = load_image_safe("assets/img/Ressources/masque.png");
+  backg->masque = load_image_safe("Ressources/masque.png");
   if (backg->masque == NULL) {
     printf("Erreur d'ouverture: %s\n", SDL_GetError());
     return;
@@ -56,34 +56,26 @@ void init_background_minimap(backg *backg) {
  * @brief Pour initialiser le personnage.
  * @param perso pour personnage.
  * @return Nothing
- * @deprecated Legacy function - use perso.h functions instead
  */
-/*
-void init_perso(perso* perso)
-{
-        perso->img = load_image_safe("assets/img/Ressources/perso.png");
-        if (perso->img == NULL)
-        {
-                printf("Erreur d'ouverture: %s\n", SDL_GetError());
-                return;
-        }
-        perso->pos.x = 0;
-        perso->pos.y = 450;
-        perso->pos.h = 144;
-        perso->pos.w = 144;
+void init_perso(perso *perso) {
+  perso->img = load_image_safe("Ressources/perso.png");
+  if (perso->img == NULL) {
+    printf("Erreur d'ouverture: %s\n", SDL_GetError());
+    return;
+  }
+  perso->pos.x = 0;
+  perso->pos.y = 450;
+  perso->pos.h = 144;
+  perso->pos.w = 144;
 }
-*/
 
 void afficher_background(backg background, SDL_Surface *screen) {
   SDL_BlitSurface(background.img, NULL, screen, &background.pos);
 }
 
-/*
-void afficher_perso(perso perso, SDL_Surface* screen)
-{
-        SDL_BlitSurface(perso.img, NULL, screen, &perso.pos);
+void afficher_perso(perso perso, SDL_Surface *screen) {
+  SDL_BlitSurface(perso.img, NULL, screen, &perso.pos);
 }
-*/
 
 void afficherminimap(minimap m, SDL_Surface *screen) {
   SDL_BlitSurface(m.img, NULL, screen, &m.pos);
@@ -106,39 +98,35 @@ SDL_Color GetPixel(SDL_Surface *backg, int x, int y) {
   return (color);
 }
 
-/*
-int collisionPP(perso p, SDL_Surface *masque)
-{
-    SDL_Color test, couleurnoir = {0, 0, 0};
-    SDL_Rect pos[8];
-    pos[0].x = p.pos.x;
-    pos[0].y = p.pos.y;
-    pos[1].x = p.pos.x + p.pos.w / 2;
-    pos[1].y = p.pos.y;
-    pos[2].x = p.pos.x + p.pos.w;
-    pos[2].y = p.pos.y;
-    pos[3].x = p.pos.x;
-    pos[3].y = p.pos.y + p.pos.h / 2;
-    pos[4].x = p.pos.x;
-    pos[4].y = p.pos.y + p.pos.h;
-    pos[5].x = p.pos.x + p.pos.w / 2;
-    pos[5].y = p.pos.y + p.pos.h;
-    pos[6].x = p.pos.x + p.pos.w;
-    pos[6].y = p.pos.y + p.pos.h;
-    pos[7].x = p.pos.x + p.pos.w;
-    pos[7].y = p.pos.y + p.pos.h / 2;
-    int collision = 0, x, y;
-    for (int i = 0; i < 8 && collision == 0; i++)
-    {
-        x = pos[i].x;
-        y = pos[i].y;
-        test = GetPixel(masque, x, y);
-        if (test.r == 0 && test.g == 0 && test.b == 0)
-            collision = 1;
-    }
-    return collision;
+int collisionPP(perso p, SDL_Surface *masque) {
+  SDL_Color test, couleurnoir = {0, 0, 0};
+  SDL_Rect pos[8];
+  pos[0].x = p.pos.x;
+  pos[0].y = p.pos.y;
+  pos[1].x = p.pos.x + p.pos.w / 2;
+  pos[1].y = p.pos.y;
+  pos[2].x = p.pos.x + p.pos.w;
+  pos[2].y = p.pos.y;
+  pos[3].x = p.pos.x;
+  pos[3].y = p.pos.y + p.pos.h / 2;
+  pos[4].x = p.pos.x;
+  pos[4].y = p.pos.y + p.pos.h;
+  pos[5].x = p.pos.x + p.pos.w / 2;
+  pos[5].y = p.pos.y + p.pos.h;
+  pos[6].x = p.pos.x + p.pos.w;
+  pos[6].y = p.pos.y + p.pos.h;
+  pos[7].x = p.pos.x + p.pos.w;
+  pos[7].y = p.pos.y + p.pos.h / 2;
+  int collision = 0, x, y;
+  for (int i = 0; i < 8 && collision == 0; i++) {
+    x = pos[i].x;
+    y = pos[i].y;
+    test = GetPixel(masque, x, y);
+    if (test.r == 0 && test.g == 0 && test.b == 0)
+      collision = 1;
+  }
+  return collision;
 }
-*/
 
 void MAJminimap(int pas, int direc, minimap *m, int redim) {
   if (direc == 0) {
@@ -182,7 +170,7 @@ int init_text_temps(text *t) {
   strcpy(t->txt, "");
   t->pos.x = 20;
   t->pos.y = 20;
-  testload = charger_font(t, "assets/img/Ressources/LemonMilk.otf");
+  testload = charger_font(t, "Ressources/LemonMilk.otf");
   t->surf = NULL;
   return testload;
 }
@@ -227,12 +215,7 @@ void liberer_backg(backg b) {
   SDL_FreeSurface(b.masque);
 }
 
-/*
-void liberer_perso(perso p)
-{
-        SDL_FreeSurface(p.img);
-}
-*/
+void liberer_perso(perso p) { SDL_FreeSurface(p.img); }
 
 void liberer_minimap(minimap m) {
   SDL_FreeSurface(m.img);
@@ -255,10 +238,10 @@ void quitgame(int *q, tic c) {
 }
 
 void init(tic *c) {
-  c->table = load_image_safe("assets/img/Ressources/xo.png");
-  c->t[0] = load_image_safe("assets/img/Ressources/X.png");
-  c->t[1] = load_image_safe("assets/img/Ressources/O.png");
-  c->bg = load_image_safe("assets/img/Ressources/white.jpeg");
+  c->table = load_image_safe("xo/xo.png");
+  c->t[0] = load_image_safe("xo/x.png");
+  c->t[1] = load_image_safe("xo/o.png");
+  c->bg = load_image_safe("xo/white.jpeg");
   if (c->t[1] == NULL)
     printf("Affichage réussi\n");
   for (int i = 0; i < 3; i++)
