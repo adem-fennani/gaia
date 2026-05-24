@@ -17,8 +17,8 @@
 #include <stdlib.h>
 
 /**
- * @brief Pour initialiser le minimap.
- * @param m pour minimap.
+ * @brief Initialize the minimap
+ * @param m pointer to minimap
  * @return Nothing
  */
 void initmap(minimap *m) {
@@ -31,21 +31,21 @@ void initmap(minimap *m) {
 }
 
 /**
- * @brief Pour initialiser le background.
- * @param bachg pour background.
+ * @brief Initialize the background
+ * @param bachg pointer to background
  * @return Nothing
  */
 void init_background_minimap(backg *backg) {
-  backg->img = load_image_safe("assets/img/Ressources/background_2.png");
+  backg->img = load_image_safe("assets/img/ressources/background_2.png");
   if (backg->img == NULL) {
-    printf("Erreur d'ouverture: %s\n", SDL_GetError());
+    printf("Error opening: %s\n", SDL_GetError());
     return;
   }
   backg->pos.x = 0;
   backg->pos.y = 0;
-  backg->masque = load_image_safe("assets/img/Ressources/masque.png");
+  backg->masque = load_image_safe("assets/img/ressources/masque.png");
   if (backg->masque == NULL) {
-    printf("Erreur d'ouverture: %s\n", SDL_GetError());
+    printf("Error opening: %s\n", SDL_GetError());
     return;
   }
   backg->pos.x = 0;
@@ -53,18 +53,18 @@ void init_background_minimap(backg *backg) {
 }
 
 /**
- * @brief Pour initialiser le personnage.
- * @param perso pour personnage.
+ * @brief Initialize the character
+ * @param perso pointer to character
  * @return Nothing
  * @deprecated Legacy function - use perso.h functions instead
  */
 /*
 void init_perso(perso* perso)
 {
-        perso->img = load_image_safe("assets/img/Ressources/perso.png");
+        perso->img = load_image_safe("assets/img/ressources/perso.png");
         if (perso->img == NULL)
         {
-                printf("Erreur d'ouverture: %s\n", SDL_GetError());
+                printf("Error opening: %s\n", SDL_GetError());
                 return;
         }
         perso->pos.x = 0;
@@ -163,7 +163,7 @@ void minuteur(int *deb) {
 
 int charger_font(text *t, char *fich) {
   if (TTF_Init() == -1) {
-    printf("Erreur d'initialisation de TTF_Init : %s\n", TTF_GetError());
+    printf("Error initializing TTF_Init : %s\n", TTF_GetError());
     return -1;
   }
   t->police = TTF_OpenFont(fich, 40);
@@ -182,7 +182,7 @@ int init_text_temps(text *t) {
   strcpy(t->txt, "");
   t->pos.x = 20;
   t->pos.y = 20;
-  testload = charger_font(t, "assets/img/Ressources/LemonMilk.otf");
+  testload = charger_font(t, "assets/img/ressources/LemonMilk.otf");
   t->surf = NULL;
   return testload;
 }
@@ -202,8 +202,7 @@ void MAJ_temps(temps *t) {
   t->min = ts / 60;
   t->sec = ts % 60;
   if (t->min < 10 &&
-      t->sec < 10) // Cette condition assure que le temps soit affiché en deux
-                   // chiffres(exemple: 02:05 fi 3oudh 2:5).
+      t->sec < 10) // Ensure the time is formatted with leading zeros
     sprintf(t->text.txt, "Temps: 0%d:0%d", t->min, t->sec);
   else if (t->min < 10 && t->sec >= 10)
     sprintf(t->text.txt, "Temps: 0%d:%d", t->min, t->sec);
@@ -255,10 +254,10 @@ void quitgame(int *q, tic c) {
 }
 
 void init(tic *c) {
-  c->table = load_image_safe("assets/img/Ressources/xo.png");
-  c->t[0] = load_image_safe("assets/img/Ressources/X.png");
-  c->t[1] = load_image_safe("assets/img/Ressources/O.png");
-  c->bg = load_image_safe("assets/img/Ressources/white.jpeg");
+  c->table = load_image_safe("assets/img/ressources/xo.png");
+  c->t[0] = load_image_safe("assets/img/ressources/X.png");
+  c->t[1] = load_image_safe("assets/img/ressources/O.png");
+  c->bg = load_image_safe("assets/img/ressources/white.jpeg");
   if (c->t[1] == NULL)
     printf("Affichage réussi\n");
   for (int i = 0; i < 3; i++)

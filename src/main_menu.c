@@ -3,10 +3,23 @@
 #include "../include/perso.h"
 
 static SDL_Surface *screen = NULL;
-static image background, B_play, B_play1, B_settings, B_settings1, B_quit,
-    B_quit1, settings, slayed, exits, exits1;
+static image background,
+  B_play,
+  B_play1,
+  B_settings,
+  B_settings1,
+  B_quit,
+  B_quit1,
+  settings,
+  slayed,
+  exits,
+  exits1;
+
 static image backgame;
-static SDL_Rect pos_plus, pos_moin;
+
+static SDL_Rect pos_plus,
+  pos_moin;
+
 static minimap m;
 static temps t;
 static perso p, p1;
@@ -56,9 +69,9 @@ bool init_engine() {
   // initial video
   putenv("SDL_VIDEO_CENTRED=1=");
   screen = SDL_SetVideoMode(
-      1150, 650, 32, SDL_HWSURFACE | SDL_DOUBLEBUF); // fil exmple w1=800,h2=400
+      1150, 650, 32, SDL_HWSURFACE | SDL_DOUBLEBUF);
   SDL_WM_SetCaption("GAIA REPRESENT ",
-                    NULL); // faza:Sets the window tile and icone (null)
+                    NULL);
 
   // Initialize SDL_image for PNG loading
   printf("DEBUG: Initializing SDL_image...\n");
@@ -67,15 +80,12 @@ bool init_engine() {
   printf("DEBUG: SDL_image initialized\n");
   fflush(stdout);
 
-  // verif d initial
   if (screen == NULL) {
     printf("Can't set video mode: %s \n", SDL_GetError());
     return false;
   }
 
-  // sound - initialize with optimized settings for SDL 1.2
-  // Try smaller buffer size (256) for cleaner audio, use explicit format
-  if (Mix_OpenAudio(22050, MIX_DEFAULT_FORMAT, 2, 256) == -1) {
+  if (Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 4096) == -1) {
     printf("FAIL AUDIO %s\n", Mix_GetError());
   }
 
@@ -101,11 +111,12 @@ void load_game_resources() {
   backgame.pos.w = 1150;
   backgame.pos.h = 650;
 
-  music = Mix_LoadMUS("assets/audio/music.mp3"); // load tha music
-  if (music == NULL) {
-    printf("FAIL MUSIC LOAD %s\n", Mix_GetError());
-  }
-  Mix_PlayMusic(music, -1); // play music
+  // Disabled music due to sdl12-compat heap buffer overflow bug during MP3 decoding
+  // music = Mix_LoadMUS("assets/audio/music.mp3");
+  // if (music == NULL) {
+  //   printf("FAIL MUSIC LOAD %s\n", Mix_GetError());
+  // }
+  // Mix_PlayMusic(music, -1); // play music
 
   // sound bref - use -1 for all channels, not channel 1
   Mix_Volume(-1, MIX_MAX_VOLUME / 3); // Start with lower volume
@@ -116,26 +127,23 @@ void load_game_resources() {
     Mix_VolumeChunk(son, MIX_MAX_VOLUME / 3);
   }
 
+  printf("DEBUG: Loading background image...\n");
+  fflush(stdout);
   // background init
-  printf("DEBUG: Skipping menu image loads for now (testing core game)\n");
-  fflush(stdout);
-  // All image loading disabled for testing - we'll use dummy surfaces
-  //	init_background(&background, "background.jpg");
+  init_background(&background, "assets/img/background.jpg");
 
+  printf("DEBUG: Loading menu buttons...\n");
+  fflush(stdout);
   // MENU BUTTONS
-  //  All button loading disabled
-  //     init_bouton(&B_play,"B_play.png",&B_settings,"B_settings.png",&B_quit,"B_quit.png");
-  //     init_bouton(&B_play1,"B_play1.png",&B_settings1,"B_settings1.png",&B_quit1,"B_quit1.png");
+  init_bouton(&B_play, "assets/img/B_play.png", &B_settings, "assets/img/B_settings.png", &B_quit, "assets/img/B_quit.png");
+  init_bouton(&B_play1, "assets/img/B_play1.png", &B_settings1, "assets/img/B_settings1.png", &B_quit1, "assets/img/B_quit1.png");
 
-  // kent fil settings initialisation
-  //  All settings image loading disabled
-  //     init_background(&settings,"settings.png");
-  //     init_retour_bouton(&exits,"exits.png");
-  //     init_retour_bouton(&exits1,"exits1.png");
-  //     init_volume_slayed(&slayed,"slayed.png");
-
-  printf("DEBUG: Core game initialized without images\n");
+  printf("DEBUG: Loading settings images...\n");
   fflush(stdout);
+  init_background(&settings, "assets/img/settings.png");
+  init_retour_bouton(&exits, "assets/img/exits.png");
+  init_retour_bouton(&exits1, "assets/img/exits1.png");
+  init_volume_slayed(&slayed, "assets/img/slayed.png");
 
   pos_moin.x = 489;
   pos_moin.y = 227;
@@ -147,7 +155,6 @@ void load_game_resources() {
   pos_plus.w = 30;
   pos_plus.h = 34;
 
-  // init perso
   printf("DEBUG: Initializing perso...\n");
   fflush(stdout);
   initPerso(&p);
@@ -155,7 +162,6 @@ void load_game_resources() {
   fflush(stdout);
   initPerso1(&p1);
 
-  // iinit minimap
   printf("DEBUG: Initializing minimap...\n");
   fflush(stdout);
   initmap(&m);
@@ -164,14 +170,6 @@ void load_game_resources() {
   init_temps(&t);
   printf("DEBUG: Setup complete, entering main loop...\n");
   fflush(stdout);
-
-  // done::: de boucle ken 1 lo3ba te5dem ken 0 means exit
-  // s::: hiya tmathel affichage mta3 settings
-  // v::: hiya volume de music
-
-  // etat::: nesta3emlouh bech na3emlo test fi ena background mawjoudin ken fi
-  // (menu0,play1,setting2,credits3,achivements4) k::: designe le choix
-  // selectionnee mta3 menu
 
   posy = p.pos_background.y;
   posy1 = p1.pos_background.y;
@@ -189,7 +187,7 @@ void run_game_loop() {
     dt = SDL_GetTicks() - t_prev;
     t_prev = SDL_GetTicks();
     switch (etat) {
-    case 0: // ken ahna mawjoudin fil menu
+    case 0: // Menu state
     {
       /*affichier_imag(imgBACK[counterr],screen);
           if(counterr>=20)
@@ -201,7 +199,7 @@ void run_game_loop() {
 
       affichier_imag(background, screen);
       switch (k) {
-      case 0: // k=0 awel mayet7al menu
+      case 0: // Initial menu state
       {
         affichier_imag(B_play, screen);
         affichier_imag(B_settings, screen);
@@ -233,7 +231,7 @@ void run_game_loop() {
       }
       } // fin switch de k
 
-      while (SDL_PollEvent(&event)) // madem fama event yod5el lil boucle
+      while (SDL_PollEvent(&event)) 
       {
         switch (event.type) {
         case SDL_QUIT:
@@ -243,9 +241,7 @@ void run_game_loop() {
         case SDL_KEYDOWN: {
           switch (event.key.keysym.sym) {
           case SDLK_UP: {
-            // houwa fil asel yabda k=0 ki nenzel 3ala fleche up houwa bech
-            // ytesti yal9a k=0 bech ybadelha k=2 w yaffichi bouton (quit)
-            // mlawna
+            
             if (k == 0) {
               k = 3;
             }
@@ -254,14 +250,14 @@ void run_game_loop() {
               k = 3;
             }
 
-            else // les bouton eli fil weseet
+            else 
             {
               k--;
             }
 
             break;
 
-          } // fin case bout up
+          } 
 
           case SDLK_DOWN: {
             if (k == 0)
@@ -276,7 +272,7 @@ void run_game_loop() {
             }
 
             break;
-          } // fin case bout down
+          } 
 
           case SDLK_RETURN: {
             if (k == 1) {
@@ -291,20 +287,20 @@ void run_game_loop() {
 
             else if (k == 3) {
               play_click_sound();
-              done = 0; // bech yo5rej mel boucle w mil game
+              done = 0; 
             }
 
             break;
 
-          } // fin ell case amlt entree
-          } // fin switch de event.key.keysym.sym
+          } 
+          } 
 
           break;
-        } // fin case SDL_KEYDOWN
+        } 
 
         case SDL_MOUSEBUTTONDOWN: {
           if (event.button.button ==
-              SDL_BUTTON_LEFT) // ki tenzel 3ala souris felsa eli 3ala lisar
+              SDL_BUTTON_LEFT) 
           {
             if (event.button.x > B_play.pos.x &&
                 event.button.x < B_play.pos.x + B_play.img->w &&
@@ -330,10 +326,10 @@ void run_game_loop() {
               play_click_sound();
               done = 0; // exit
             }
-          } // if
-        } // fin case SDL_MOUSEBUTTONDOWN
+          } 
+        } 
 
-        case SDL_MOUSEMOTION: // win enti 9a3ed t7arek fi souris
+        case SDL_MOUSEMOTION: 
         {
           if (event.button.x > B_play.pos.x &&
               event.button.x < B_play.pos.x + B_play.img->w &&
@@ -348,7 +344,7 @@ void run_game_loop() {
                    event.button.x < B_settings.pos.x + B_settings.img->w &&
                    event.button.y > B_settings.pos.y &&
                    event.button.y <
-                       B_settings.pos.y + B_settings.img->h) // sittings
+                       B_settings.pos.y + B_settings.img->h) 
           {
             play_click_sound();
             k = 2;
@@ -366,83 +362,83 @@ void run_game_loop() {
           else
             k = 0;
 
-        } // fin case SDL_MOUSEMOTION
-        } // finswitch
-      } // fin de boucle de event
+        } 
+        } 
+      } 
 
       break;
 
-    } // fin case 0 ;ahna fil menu; switch etat
+    } 
 
-    case 2: // ken ahna mawjoudin fil settings
+    case 2: // Settings state
     {
       affichier_imag(settings, screen);
       switch (s) {
-      case 0: // awel matoud5el li settings
+      case 0: // Initial settings state
       {
         affichier_imag(slayed, screen);
         affichier_imag(exits, screen);
         break;
       }
 
-      case 1: // affiche bouton back to main menu selectionne
+      case 1: // Back button selected
       {
         affichier_imag(slayed, screen);
         affichier_imag(exits1, screen);
         break;
       }
-      } // fin switch s
+      } 
 
       while (SDL_PollEvent(&event)) {
         switch (event.type) {
-        case SDL_QUIT: // ki tenzel 3ala x 7amra yo5rej
+        case SDL_QUIT: 
           done = 0;
           break;
 
-        case SDL_KEYDOWN: // event mta3 clavier
+        case SDL_KEYDOWN: 
         {
           switch (event.key.keysym.sym) {
-          case SDLK_ESCAPE: // ki tenzel echap tetbadle menu main
+          case SDLK_ESCAPE: 
           {
             etat = 0;
             break;
           }
 
-          case SDLK_LEFT: // fleche eli 3a lisar
+          case SDLK_LEFT: 
           {
-            v -= 9; // na9so fil volume mta3 musiq
+            v -= 9; 
             Mix_VolumeMusic(v);
-            slayed.pos.x -= 15;      // n7arko fi slyde li lysar
-            if (slayed.pos.x <= 515) // ki yosle lil 7ad la5er yo9ef l8adi
+            slayed.pos.x -= 15;      
+            if (slayed.pos.x <= 515) 
               slayed.pos.x = 515;
             break;
           }
 
-          case SDLK_RIGHT: // fleche eli 3a limin
+          case SDLK_RIGHT: 
           {
-            v += 9; // nzido fil volume mta3 musiq
+            v += 9; 
             Mix_VolumeMusic(v);
-            slayed.pos.x += 15;      // n7arko fi slyde li limin
-            if (slayed.pos.x >= 720) // ki yosle lil 7ad la5er yo9ef l8adi
+            slayed.pos.x += 15;      
+            if (slayed.pos.x >= 720) 
               slayed.pos.x = 720;
             break;
           }
-          } // fin de switch event.key.keysym.sym
+          } 
         }
 
-        case SDL_MOUSEBUTTONDOWN: // ki tenzel 3ala souris
+        case SDL_MOUSEBUTTONDOWN: 
         {
           if (event.button.button ==
-              SDL_BUTTON_LEFT) // ki tenzel 3ala felsa eli 3a lisar
+              SDL_BUTTON_LEFT) 
           {
             if (event.button.x > pos_plus.x &&
                 event.button.x < pos_plus.x + pos_plus.w &&
                 event.button.y > pos_plus.y &&
                 event.button.y < pos_plus.y + pos_plus.h) {
-              v += 10; // nzido fil volume mta3 musiq
+              v += 10; 
               Mix_VolumeMusic(v);
-              slayed.pos.x += 15;      // n7arko fi slyde li limin
-              if (slayed.pos.x >= 720) // ki yosle lil 7ad la5er yo9ef l8adi
+              slayed.pos.x += 15;      
+              if (slayed.pos.x >= 720) 
                 slayed.pos.x = 720;
             }
 
@@ -450,10 +446,10 @@ void run_game_loop() {
                      event.button.x < pos_moin.x + pos_moin.w &&
                      event.button.y > pos_moin.y &&
                      event.button.y < pos_moin.y + pos_moin.h) {
-              v -= 10; // na9so fil volume mta3 musiq
+              v -= 10; 
               Mix_VolumeMusic(v);
-              slayed.pos.x -= 15;      // n7arko fi slyde li lysar
-              if (slayed.pos.x <= 515) // ki yosle lil 7ad la5er yo9ef l8adi
+              slayed.pos.x -= 15;      
+              if (slayed.pos.x <= 515) 
                 slayed.pos.x = 515;
             }
 
@@ -479,15 +475,15 @@ void run_game_loop() {
 
           else
             s = 0;
-          // bech nzid ell buttons achivements w credits
-        } // fin case
-        } // fin switch event type
-      } // while sdl pol event taa ell settings
+          // TODO: Add achievement and credits buttons
+        } 
+        } 
+      } 
       break;
 
-    } // fin case etat=2 eli ahna fil settings
+    }
 
-    case 1: // ken hana fil jeux
+    case 1: // In-game state
     {
       SDL_BlitSurface(backgame.img, NULL, screen, &backgame.pos);
       afficherPerso(p, screen);
@@ -501,7 +497,7 @@ void run_game_loop() {
 
       case SDL_KEYDOWN: {
         switch (event.key.keysym.sym) {
-        case SDLK_ESCAPE: // ki tenzel echap tetbadle menu main
+        case SDLK_ESCAPE: 
         {
           etat = 0;
           break;
@@ -620,7 +616,7 @@ void run_game_loop() {
 
       break;
     }
-    } // fin switch etat
+    } 
 
     if (dep == 1) {
       deplacerPerso(&p, dt);
@@ -713,7 +709,7 @@ void run_game_loop() {
       p1.vie = 1;
     }
 
-  } // fin while game loop
+  } 
 }
 
 void cleanup_game() {
@@ -795,7 +791,7 @@ void cleanup_game() {
     SDL_FreeSurface(p1.score);
   }
 
-  SDL_Quit(); // ll sdl lkoll
+  SDL_Quit(); 
 }
 
 int main() {

@@ -22,10 +22,10 @@
  * @return Nothing
  */
 void initmap(minimap *m) {
-  m->img = load_image_safe("Ressources/minimap.png");
+  m->img = load_image_safe("ressources/minimap.png");
   m->pos.x = 576;
   m->pos.y = 20;
-  m->perso_img = load_image_safe("Ressources/fleche.png");
+  m->perso_img = load_image_safe("ressources/fleche.png");
   m->perso_pos.x = 576;
   m->perso_pos.y = 94;
 }
@@ -36,14 +36,14 @@ void initmap(minimap *m) {
  * @return Nothing
  */
 void init_background(backg *backg) {
-  backg->img = load_image_safe("Ressources/background_2.png");
+  backg->img = load_image_safe("ressources/background_2.png");
   if (backg->img == NULL) {
     printf("Erreur d'ouverture: %s\n", SDL_GetError());
     return;
   }
   backg->pos.x = 0;
   backg->pos.y = 0;
-  backg->masque = load_image_safe("Ressources/masque.png");
+  backg->masque = load_image_safe("ressources/masque.png");
   if (backg->masque == NULL) {
     printf("Erreur d'ouverture: %s\n", SDL_GetError());
     return;
@@ -58,7 +58,7 @@ void init_background(backg *backg) {
  * @return Nothing
  */
 void init_perso(perso *perso) {
-  perso->img = load_image_safe("Ressources/perso.png");
+  perso->img = load_image_safe("ressources/perso.png");
   if (perso->img == NULL) {
     printf("Erreur d'ouverture: %s\n", SDL_GetError());
     return;
@@ -170,7 +170,7 @@ int init_text_temps(text *t) {
   strcpy(t->txt, "");
   t->pos.x = 20;
   t->pos.y = 20;
-  testload = charger_font(t, "Ressources/LemonMilk.otf");
+  testload = charger_font(t, "ressources/LemonMilk.otf");
   t->surf = NULL;
   return testload;
 }
