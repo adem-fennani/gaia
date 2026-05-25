@@ -35,21 +35,21 @@ void initmap(minimap *m) {
  * @param bachg pointer to background
  * @return Nothing
  */
-void init_background_minimap(backg *backg) {
-  backg->img = load_image_safe("assets/img/ressources/background_2.png");
-  if (backg->img == NULL) {
+void init_background_minimap(backg *bg) {
+  bg->img = load_image_safe("assets/img/ressources/background_2.png");
+  if (bg->img == NULL) {
     printf("Error opening: %s\n", SDL_GetError());
     return;
   }
-  backg->pos.x = 0;
-  backg->pos.y = 0;
-  backg->masque = load_image_safe("assets/img/ressources/masque.png");
-  if (backg->masque == NULL) {
+  bg->pos.x = 0;
+  bg->pos.y = 0;
+  bg->masque = load_image_safe("assets/img/ressources/masque.png");
+  if (bg->masque == NULL) {
     printf("Error opening: %s\n", SDL_GetError());
     return;
   }
-  backg->pos.x = 0;
-  backg->pos.y = 0;
+  bg->pos.x = 0;
+  bg->pos.y = 0;
 }
 
 /**
@@ -90,19 +90,19 @@ void afficherminimap(minimap m, SDL_Surface *screen) {
   SDL_BlitSurface(m.perso_img, NULL, screen, &m.perso_pos);
 }
 
-SDL_Color GetPixel(SDL_Surface *backg, int x, int y) {
+SDL_Color GetPixel(SDL_Surface *surf, int x, int y) {
   SDL_Color color;
   Uint32 col = 0;
   // Determine position
-  char *pixelPosition = (char *)backg->pixels;
+  char *pixelPosition = (char *)surf->pixels;
   // Offset by Y
-  pixelPosition += (backg->pitch * y);
+  pixelPosition += (surf->pitch * y);
   // Offset by X
-  pixelPosition += (backg->format->BytesPerPixel * x);
+  pixelPosition += (surf->format->BytesPerPixel * x);
   // Copy pixel data
-  memcpy(&col, pixelPosition, backg->format->BytesPerPixel);
+  memcpy(&col, pixelPosition, surf->format->BytesPerPixel);
   // Convert to color
-  SDL_GetRGB(col, backg->format, &color.r, &color.g, &color.b);
+  SDL_GetRGB(col, surf->format, &color.r, &color.g, &color.b);
   return (color);
 }
 
@@ -193,6 +193,7 @@ int init_temps(temps *t) {
   t->min = 0;
   t->sec = 0;
   test = init_text_temps(&t->text);
+  return test;
 }
 
 void MAJ_temps(temps *t) {
@@ -217,13 +218,19 @@ void afficher_temps(temps t, SDL_Surface *screen) {
 }
 
 void liberer_text(text t) {
-  TTF_CloseFont(t.police);
+  if (t.police != NULL) {
+    TTF_CloseFont(t.police);
+  }
   TTF_Quit();
 }
 
 void liberer_backg(backg b) {
-  SDL_FreeSurface(b.img);
-  SDL_FreeSurface(b.masque);
+  if (b.img != NULL) {
+    SDL_FreeSurface(b.img);
+  }
+  if (b.masque != NULL) {
+    SDL_FreeSurface(b.masque);
+  }
 }
 
 /*
@@ -234,8 +241,12 @@ void liberer_perso(perso p)
 */
 
 void liberer_minimap(minimap m) {
-  SDL_FreeSurface(m.img);
-  SDL_FreeSurface(m.perso_img);
+  if (m.img != NULL) {
+    SDL_FreeSurface(m.img);
+  }
+  if (m.perso_img != NULL) {
+    SDL_FreeSurface(m.perso_img);
+  }
 }
 
 // Tâche en Blanc

@@ -26,12 +26,9 @@ static perso p, p1;
 static Mix_Music *music = NULL;
 static Mix_Chunk *son = NULL;
 static SDL_Event event;
-static int done = 1, n = 0;
+static int done = 1;
 static int k = 0, etat = 0, s = 0, v = 64, counterr = 0;
-static int count_p = 0, dep = 0, acc = 0, posy = 0, count_p1 = 0, dep1 = 0,
-           acc1 = 0, posy1 = 0;
-static char score[20];
-static char score1[20];
+static int dep = 0, acc = 0, posy = 0, dep1 = 0, acc1 = 0, posy1 = 0;
 static Uint32 dt = 0, t_prev = 0;
 
 static void play_click_sound() {
@@ -239,7 +236,7 @@ void run_game_loop() {
           break;
 
         case SDL_KEYDOWN: {
-          switch (event.key.keysym.sym) {
+  switch (event.key.keysym.sym) {
           case SDLK_UP: {
             
             if (k == 0) {
@@ -293,10 +290,11 @@ void run_game_loop() {
             break;
 
           } 
-          } 
-
+          default:
+            break;
+          }
           break;
-        } 
+        }
 
         case SDL_MOUSEBUTTONDOWN: {
           if (event.button.button ==
@@ -329,6 +327,7 @@ void run_game_loop() {
           } 
         } 
 
+          break;
         case SDL_MOUSEMOTION: 
         {
           if (event.button.x > B_play.pos.x &&
@@ -397,7 +396,7 @@ void run_game_loop() {
 
         case SDL_KEYDOWN: 
         {
-          switch (event.key.keysym.sym) {
+  switch (event.key.keysym.sym) {
           case SDLK_ESCAPE: 
           {
             etat = 0;
@@ -423,7 +422,10 @@ void run_game_loop() {
               slayed.pos.x = 720;
             break;
           }
-          } 
+          default:
+            break;
+          }
+          break;
         }
 
         case SDL_MOUSEBUTTONDOWN: 
@@ -465,6 +467,7 @@ void run_game_loop() {
           }
         }
 
+          break;
         case SDL_MOUSEMOTION: {
           if (event.button.x > exits.pos.x &&
               event.button.x < exits.pos.x + exits.img->w &&
@@ -562,6 +565,7 @@ void run_game_loop() {
           p1.direction = 0;
           dep1 = 1;
           break;
+        default: break;
         }
 
         break;
@@ -608,6 +612,7 @@ void run_game_loop() {
         case SDLK_i:
           acc1 = 0;
           break;
+        default: break;
         }
 
         break;
@@ -732,14 +737,20 @@ void cleanup_game() {
   librer(exits1);
 
   // lib sounds
-  Mix_FreeMusic(music);
+  if (music != NULL) {
+    Mix_FreeMusic(music);
+  }
   if (son != NULL) {
     Mix_FreeChunk(son);
   }
 
   // perso cleanup
-  TTF_CloseFont(p.police_score);
-  TTF_CloseFont(p1.police_score);
+  if (p.police_score != NULL) {
+    TTF_CloseFont(p.police_score);
+  }
+  if (p1.police_score != NULL) {
+    TTF_CloseFont(p1.police_score);
+  }
   TTF_Quit();
 
   // Free player 1 images

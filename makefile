@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -g -I$(PWD)/include $(shell sdl-config --cflags)
+CFLAGS = -g -Wall -Wextra -Wshadow -I$(PWD)/include $(shell sdl-config --cflags)
 LDFLAGS = -lSDL -lSDL_ttf -lSDL_image -lSDL_mixer
 
 SRC = src/menu.c src/main_menu.c src/perso.c src/minimap.c src/utils.c

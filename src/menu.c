@@ -36,7 +36,11 @@ void affichier_imag(image p, SDL_Surface *screen) {
   SDL_BlitSurface(p.img, NULL, screen, &p.pos);
 }
 
-void librer(image p) { SDL_FreeSurface(p.img); }
+void librer(image p) {
+  if (p.img != NULL) {
+    SDL_FreeSurface(p.img);
+  }
+}
 /*void init_text(SDL_Rect *pos_text)
 {
 pos_text->x = 480;

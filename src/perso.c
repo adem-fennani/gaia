@@ -29,6 +29,10 @@ void initPerso(perso *p) {
 
   // FIX: Allocate space for 6 SDL_Surface pointers (not just one surface!)
   p->barre = (SDL_Surface **)malloc(sizeof(SDL_Surface *) * 6);
+  if (p->barre == NULL) {
+    printf("Error: Memory allocation failed for barre\n");
+    return;
+  }
   for (i = 0; i < 6; i++) {
     sprintf(pers, "assets/img/barre/barre_%d.png", i);
     p->barre[i] = SDL_CreateRGBSurface(0, 50, 50, 32, 0, 0, 0, 0);
@@ -185,6 +189,10 @@ void initPerso1(perso *p) {
 
   // FIX: Allocate space for 6 SDL_Surface pointers (not just one surface!)
   p->barre = (SDL_Surface **)malloc(sizeof(SDL_Surface *) * 6);
+  if (p->barre == NULL) {
+    printf("Error: Memory allocation failed for barre\n");
+    return;
+  }
   for (i = 0; i < 6; i++) {
     sprintf(pers, "assets/img/barre1/barre_%d.png", i);
     p->barre[i] = SDL_CreateRGBSurface(0, 50, 50, 32, 0, 0, 0, 0);
