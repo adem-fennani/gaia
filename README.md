@@ -3,7 +3,7 @@ A 2D platformer and menu-based game built in C using SDL 1.2.
 ## Current State & Known Issues
 **⚠️ Work in Progress:** The game currently has several significant issues that need to be fixed before it is fully playable:
 - **Asset Corruption:** Some original PNG assets (e.g., `Niv1.png`, `B_play1.png`) are corrupted and cause `libpng` to abort. Temporary dummy surfaces are currently bypassing these crashes. These assets need to be fixed or re-exported.
-- **Memory Management:** While immediate heap corruptions have been fixed, the game still requires holistic memory management reviews to ensure all resources are properly freed during screen transitions.
+- **Memory Management:** Immediate heap corruptions and null-pointer crashes have been addressed locally. Ongoing scrutiny is required to ensure that new entities remain cleanly allocated and freed.
 - **Legacy Framework:** This is built on SDL 1.2, which is outdated. There may be audio/video compatibility quirks on modern Linux systems until it is ported to SDL 2.0.
 ## Tech Stack
 - **Language:** C
