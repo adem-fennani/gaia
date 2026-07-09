@@ -1,4 +1,5 @@
 #include "../include/perso.h"
+#include "../include/utils.h"
 #include <stdio.h>
 
 #include <SDL/SDL_error.h>
@@ -12,14 +13,12 @@ void initPerso(perso *p) {
   char pers[50];
   printf("DEBUG: initPerso: Starting...\n");
   fflush(stdout);
-  // Load character animation frames
   for (i = 0; i < 2; i++) {
     for (j = 0; j < 7; j++) {
       sprintf(pers, "assets/img/perso/image%d-%d.png", i, j);
-      // Create dummy surfaces instead of loading potentially corrupted files
-      p->image[i][j] = SDL_CreateRGBSurface(0, 100, 100, 32, 0, 0, 0, 0);
+      p->image[i][j] = load_image_safe(pers);
       if (p->image[i][j] == NULL) {
-        printf("Error creating perso surface %d-%d: %s\n", i, j,
+        printf("Error loading perso surface %d-%d: %s\n", i, j,
                SDL_GetError());
       }
     }
@@ -27,7 +26,6 @@ void initPerso(perso *p) {
   printf("DEBUG: initPerso: Character frames created\n");
   fflush(stdout);
 
-  // FIX: Allocate space for 6 SDL_Surface pointers (not just one surface!)
   p->barre = (SDL_Surface **)malloc(sizeof(SDL_Surface *) * 6);
   if (p->barre == NULL) {
     printf("Error: Memory allocation failed for barre\n");
@@ -35,9 +33,9 @@ void initPerso(perso *p) {
   }
   for (i = 0; i < 6; i++) {
     sprintf(pers, "assets/img/barre/barre_%d.png", i);
-    p->barre[i] = SDL_CreateRGBSurface(0, 50, 50, 32, 0, 0, 0, 0);
+    p->barre[i] = load_image_safe(pers);
     if (p->barre[i] == NULL) {
-      printf("Error creating barre surface %d: %s\n", i, SDL_GetError());
+      printf("Error loading barre surface %d: %s\n", i, SDL_GetError());
     }
   }
   printf("DEBUG: initPerso: Health bars created\n");
@@ -171,15 +169,12 @@ void initPerso1(perso *p) {
   char pers[50];
   printf("DEBUG: initPerso1: Starting...\n");
   fflush(stdout);
-  // Load character animation frames (use same"perso" folder since perso1
-  // doesn't exist)
   for (i = 0; i < 2; i++) {
     for (j = 0; j < 7; j++) {
-      sprintf(pers, "assets/img/perso/image%d-%d.png", i,
-              j); // Use perso folder for player 2 as well
-      p->image[i][j] = SDL_CreateRGBSurface(0, 100, 100, 32, 0, 0, 0, 0);
+      sprintf(pers, "assets/img/perso/image%d-%d.png", i, j);
+      p->image[i][j] = load_image_safe(pers);
       if (p->image[i][j] == NULL) {
-        printf("Error creating perso surface for player 2 %d-%d: %s\n", i, j,
+        printf("Error loading perso surface for player 2 %d-%d: %s\n", i, j,
                SDL_GetError());
       }
     }
@@ -187,7 +182,6 @@ void initPerso1(perso *p) {
   printf("DEBUG: initPerso1: Character frames created\n");
   fflush(stdout);
 
-  // FIX: Allocate space for 6 SDL_Surface pointers (not just one surface!)
   p->barre = (SDL_Surface **)malloc(sizeof(SDL_Surface *) * 6);
   if (p->barre == NULL) {
     printf("Error: Memory allocation failed for barre\n");
@@ -195,9 +189,9 @@ void initPerso1(perso *p) {
   }
   for (i = 0; i < 6; i++) {
     sprintf(pers, "assets/img/barre1/barre_%d.png", i);
-    p->barre[i] = SDL_CreateRGBSurface(0, 50, 50, 32, 0, 0, 0, 0);
+    p->barre[i] = load_image_safe(pers);
     if (p->barre[i] == NULL) {
-      printf("Error creating barre1 surface %d: %s\n", i, SDL_GetError());
+      printf("Error loading barre1 surface %d: %s\n", i, SDL_GetError());
     }
   }
   printf("DEBUG: initPerso1: Health bars created\n");

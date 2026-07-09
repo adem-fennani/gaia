@@ -17,3 +17,7 @@ cmake-build-*/
 minimap/html/
 minimap/latex/
 minimap/.vscode
+
+# Local planning docs
+docs/
+
