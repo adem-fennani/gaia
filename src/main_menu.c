@@ -33,6 +33,7 @@ static int victory_score_p = 0;
 static int victory_score_p1 = 0;
 static int victory_time_sec = 0;
 static int victory_winner = 0;
+static SDL_Rect camera;
 static void play_click_sound(void) {
   if (son != NULL) {
     Mix_PlayChannel(-1, son, 0);
@@ -67,7 +68,7 @@ static int rect_overlap(SDL_Rect a, SDL_Rect b) {
            b.y + b.h <= a.y);
 }
 static void reset_level1(void) {
-  p.pos_background.x = 40;
+  p.pos_background.x = 60;
   p.pos_background.y = LEVEL1_GROUND_Y;
   p.direction = 0;
   p.imag = 0;
@@ -76,7 +77,7 @@ static void reset_level1(void) {
   p.acceleration = 0;
   p.iscore = 0;
   p.vie = 5;
-  p1.pos_background.x = 135;
+  p1.pos_background.x = 200;
   p1.pos_background.y = LEVEL1_GROUND_Y;
   p1.direction = 0;
   p1.imag = 0;
@@ -122,8 +123,8 @@ static void clamp_and_resolve_obstacles(perso *player, int previous_x) {
   if (player->pos_background.x < 0) {
     player->pos_background.x = 0;
   }
-  if (player->pos_background.x > 931) {
-    player->pos_background.x = 931;
+  if (player->pos_background.x > LEVEL1_W - 219) {
+    player->pos_background.x = LEVEL1_W - 219;
   }
 }
 static int level1_completed(void) {
@@ -145,7 +146,19 @@ static void capture_victory_stats(void) {
   }
   victory_ticks = SDL_GetTicks();
 }
+static void update_camera(void) {
+  int mid_x = (p.pos_background.x + p1.pos_background.x) / 2;
+  camera.x = mid_x - SCREEN_W / 2;
+  if (camera.x < 0)
+    camera.x = 0;
+  if (camera.x > LEVEL1_W - SCREEN_W)
+    camera.x = LEVEL1_W - SCREEN_W;
+  camera.y = 0;
+  camera.w = SCREEN_W;
+  camera.h = SCREEN_H;
+}
 static void draw_level1_scene(SDL_Surface *target) {
+  SDL_Rect src_bg, dst_bg;
   SDL_Rect ground;
   SDL_Rect goal_fill = level1_goal;
   SDL_Color white = {255, 255, 255, 0};
@@ -154,16 +167,31 @@ static void draw_level1_scene(SDL_Surface *target) {
   if (target == NULL) {
     return;
   }
-  SDL_BlitSurface(backgame.img, NULL, target, &backgame.pos);
-  ground.x = 0;
+  src_bg.x = camera.x / 2;
+  src_bg.y = 0;
+  src_bg.w = SCREEN_W;
+  src_bg.h = SCREEN_H;
+  if (backgame.img != NULL && src_bg.x > backgame.img->w - SCREEN_W) {
+    src_bg.x = backgame.img->w - SCREEN_W;
+  }
+  if (src_bg.x < 0)
+    src_bg.x = 0;
+  dst_bg.x = 0;
+  dst_bg.y = 0;
+  dst_bg.w = SCREEN_W;
+  dst_bg.h = SCREEN_H;
+  SDL_BlitSurface(backgame.img, &src_bg, target, &dst_bg);
+  ground.x = -camera.x;
   ground.y = 515;
-  ground.w = SCREEN_W;
+  ground.w = LEVEL1_W;
   ground.h = SCREEN_H - ground.y;
   SDL_FillRect(target, &ground, SDL_MapRGB(target->format, 52, 36, 18));
   for (i = 0; i < 3; ++i) {
-    SDL_FillRect(target, &level1_obstacles[i],
-                 SDL_MapRGB(target->format, 175, 105, 45));
+    SDL_Rect obs = level1_obstacles[i];
+    obs.x -= camera.x;
+    SDL_FillRect(target, &obs, SDL_MapRGB(target->format, 175, 105, 45));
   }
+  goal_fill.x -= camera.x;
   SDL_FillRect(target, &goal_fill, SDL_MapRGB(target->format, 190, 170, 40));
   draw_text(target, p.police_score,
             "Level 1: reach the exit beacon to finish the mission", 20, 10,
@@ -277,19 +305,19 @@ void load_game_resources(void) {
   initPerso1(&p1);
   initmap(&m);
   init_temps(&t);
-  level1_obstacles[0].x = 240;
+  level1_obstacles[0].x = 350;
   level1_obstacles[0].y = 525;
   level1_obstacles[0].w = 80;
   level1_obstacles[0].h = 125;
-  level1_obstacles[1].x = 480;
+  level1_obstacles[1].x = 850;
   level1_obstacles[1].y = 520;
   level1_obstacles[1].w = 90;
   level1_obstacles[1].h = 130;
-  level1_obstacles[2].x = 720;
+  level1_obstacles[2].x = 1350;
   level1_obstacles[2].y = 525;
   level1_obstacles[2].w = 80;
   level1_obstacles[2].h = 125;
-  level1_goal.x = 980;
+  level1_goal.x = 1900;
   level1_goal.y = 360;
   level1_goal.w = 125;
   level1_goal.h = 180;
@@ -523,9 +551,10 @@ void run_game_loop(void) {
       saut(&p1, posy1);
       clamp_and_resolve_obstacles(&p, prev_x_p);
       clamp_and_resolve_obstacles(&p1, prev_x_p1);
+      update_camera();
       draw_level1_scene(screen);
-      afficherPerso(p, screen);
-      afficherPerso(p1, screen);
+      afficherPerso(p, screen, camera.x);
+      afficherPerso(p1, screen, camera.x);
       afficherminimap(m, screen);
       p.iscore++;
       p1.iscore++;

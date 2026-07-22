@@ -53,7 +53,7 @@ void initPerso(perso *p) {
   p->pos_barre.y = 0;
   p->direction = 0;
   p->imag = 0;
-  p->pos_background.x = 0;
+  p->pos_background.x = 60;
   p->pos_background.y = 300;
   p->pos_background.w = 219;
   p->pos_background.h = 305;
@@ -71,11 +71,12 @@ void initPerso(perso *p) {
   fflush(stdout);
 }
 
-void afficherPerso(perso p, SDL_Surface *screen) {
-  // Safety check: make sure images loaded correctly
+void afficherPerso(perso p, SDL_Surface *screen, int camera_x) {
+  SDL_Rect screen_pos;
+  screen_pos = p.pos_background;
+  screen_pos.x -= camera_x;
   if (p.image[p.direction][p.imag] != NULL) {
-    SDL_BlitSurface(p.image[p.direction][p.imag], NULL, screen,
-                    &p.pos_background);
+    SDL_BlitSurface(p.image[p.direction][p.imag], NULL, screen, &screen_pos);
   } else {
     printf("Warning: perso image [%d][%d] is NULL\n", p.direction, p.imag);
   }
@@ -109,8 +110,8 @@ void deplacerPerso(perso *p, Uint32 dt) {
 
   case 0:
     p->pos_background.x += dx;
-    if (p->pos_background.x >= 931) {
-      p->pos_background.x = 931;
+    if (p->pos_background.x >= LEVEL1_W - 219) {
+      p->pos_background.x = LEVEL1_W - 219;
     }
     break;
 
@@ -153,8 +154,8 @@ void saut(perso *p, int posy) {
   if (p->pos_background.x <= 0) {
     p->pos_background.x = 0;
   }
-  if (p->pos_background.x >= 1150) {
-    p->pos_background.x = 1150;
+  if (p->pos_background.x >= LEVEL1_W - 219) {
+    p->pos_background.x = LEVEL1_W - 219;
   }
 }
 
@@ -209,7 +210,7 @@ void initPerso1(perso *p) {
   p->pos_barre.y = 0;
   p->direction = 0;
   p->imag = 0;
-  p->pos_background.x = 575;
+  p->pos_background.x = 200;
   p->pos_background.y = 300;
   p->pos_background.w = 219;
   p->pos_background.h = 305;

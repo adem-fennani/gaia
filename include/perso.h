@@ -11,6 +11,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define LEVEL1_W 2300
+
 typedef struct {
   SDL_Color color_score;
   TTF_Font *police_score;
@@ -31,7 +33,7 @@ typedef struct {
 
 void initPerso(perso *p);
 void initPerso1(perso *p);
-void afficherPerso(perso p, SDL_Surface *screen);
+void afficherPerso(perso p, SDL_Surface *screen, int camera_x);
 void deplacerPerso(perso *p, Uint32 dt);
 void animerPerso(perso *p);
 void saut(perso *p, int posy);
