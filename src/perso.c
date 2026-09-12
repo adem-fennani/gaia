@@ -1,5 +1,5 @@
 #include "../include/perso.h"
-#include "../include/utils.h"
+#include "../include/platform.h"
 #include <stdio.h>
 
 #include <SDL/SDL_error.h>
@@ -16,7 +16,7 @@ void initPerso(perso *p) {
   for (i = 0; i < 2; i++) {
     for (j = 0; j < 7; j++) {
       sprintf(pers, "assets/img/perso/image%d-%d.png", i, j);
-      p->image[i][j] = load_image_safe(pers);
+      p->image[i][j] = plat_image_load(pers);
       if (p->image[i][j] == NULL) {
         printf("Error loading perso surface %d-%d: %s\n", i, j,
                SDL_GetError());
@@ -33,14 +33,14 @@ void initPerso(perso *p) {
   }
   for (i = 0; i < 6; i++) {
     sprintf(pers, "assets/img/barre/barre_%d.png", i);
-    p->barre[i] = load_image_safe(pers);
+    p->barre[i] = plat_image_load(pers);
     if (p->barre[i] == NULL) {
       printf("Error loading barre surface %d: %s\n", i, SDL_GetError());
     }
   }
   printf("DEBUG: initPerso: Health bars created\n");
   fflush(stdout);
-  p->police_score = TTF_OpenFont("assets/fonts/Raimen.ttf", 40);
+  p->police_score = plat_font_open("assets/fonts/Raimen.ttf", 40);
   if (p->police_score == NULL) {
     printf("Error loading font Raimen.ttf: %s\n", TTF_GetError());
   }
@@ -76,13 +76,13 @@ void afficherPerso(perso p, SDL_Surface *screen, int camera_x) {
   screen_pos = p.pos_background;
   screen_pos.x -= camera_x;
   if (p.image[p.direction][p.imag] != NULL) {
-    SDL_BlitSurface(p.image[p.direction][p.imag], NULL, screen, &screen_pos);
+    plat_blit(p.image[p.direction][p.imag], NULL, screen, &screen_pos);
   } else {
     printf("Warning: perso image [%d][%d] is NULL\n", p.direction, p.imag);
   }
 
   if (p.barre != NULL && p.vie < 6 && p.barre[p.vie] != NULL) {
-    SDL_BlitSurface(p.barre[p.vie], NULL, screen, &p.pos_barre);
+    plat_blit(p.barre[p.vie], NULL, screen, &p.pos_barre);
   } else if (p.barre != NULL) {
     printf("Warning: barre[%d] is NULL or invalid\n", p.vie);
   }
@@ -91,7 +91,7 @@ void afficherPerso(perso p, SDL_Surface *screen, int camera_x) {
   if (p.police_score != NULL) {
     p.score = TTF_RenderText_Solid(p.police_score, p.scor, p.color_score);
     if (p.score != NULL) {
-      SDL_BlitSurface(p.score, NULL, screen, &p.pos_score);
+      plat_blit(p.score, NULL, screen, &p.pos_score);
     }
   }
 }
@@ -173,7 +173,7 @@ void initPerso1(perso *p) {
   for (i = 0; i < 2; i++) {
     for (j = 0; j < 7; j++) {
       sprintf(pers, "assets/img/perso/image%d-%d.png", i, j);
-      p->image[i][j] = load_image_safe(pers);
+      p->image[i][j] = plat_image_load(pers);
       if (p->image[i][j] == NULL) {
         printf("Error loading perso surface for player 2 %d-%d: %s\n", i, j,
                SDL_GetError());
@@ -190,14 +190,14 @@ void initPerso1(perso *p) {
   }
   for (i = 0; i < 6; i++) {
     sprintf(pers, "assets/img/barre1/barre_%d.png", i);
-    p->barre[i] = load_image_safe(pers);
+    p->barre[i] = plat_image_load(pers);
     if (p->barre[i] == NULL) {
       printf("Error loading barre1 surface %d: %s\n", i, SDL_GetError());
     }
   }
   printf("DEBUG: initPerso1: Health bars created\n");
   fflush(stdout);
-  p->police_score = TTF_OpenFont("assets/fonts/Raimen.ttf", 40);
+  p->police_score = plat_font_open("assets/fonts/Raimen.ttf", 40);
   if (p->police_score == NULL) {
     printf("Error loading font Raimen.ttf: %s\n", TTF_GetError());
   }

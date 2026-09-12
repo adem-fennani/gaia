@@ -3,7 +3,7 @@ EXTRA_CFLAGS =
 CFLAGS = -g -Wall -Wextra -Wshadow $(EXTRA_CFLAGS) -I$(PWD)/include $(shell sdl-config --cflags)
 LDFLAGS = -lSDL -lSDL_ttf -lSDL_image -lSDL_mixer
 
-SRC = src/menu.c src/main_menu.c src/perso.c src/minimap.c src/utils.c
+SRC = src/platform_sdl12.c src/menu.c src/main_menu.c src/perso.c src/minimap.c
 OBJ = $(patsubst src/%.c, build/%.o, $(SRC))
 
 all: pro

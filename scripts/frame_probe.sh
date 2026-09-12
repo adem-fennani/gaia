@@ -1,0 +1,70 @@
+#!/usr/bin/env bash
+# Capture rendered frames from level 1 headlessly, for before/after comparison.
+#
+# There is no test suite, so refactors that must not change behaviour (the
+# platform wrappers, the state machine split) need some way to prove it. This
+# temporarily patches main_menu.c to boot straight into the level, walk both
+# players across it, dump frames at fixed positions, and exit -- then restores
+# the file. Nothing is left behind in the source tree.
+#
+#   scripts/frame_probe.sh <output-dir>
+#
+# Compare two runs with `cmp` or sha256sum. Identical frames mean the render
+# path is unchanged.
+set -euo pipefail
+
+OUT=${1:?usage: frame_probe.sh <output-dir>}
+cd "$(dirname "$0")/.."
+mkdir -p "$OUT"
+
+SRC=src/main_menu.c
+BAK=$(mktemp)
+cp "$SRC" "$BAK"
+# Always put the source back, even if the build or run fails.
+trap 'cp "$BAK" "$SRC"; rm -f "$BAK"; make -s pro >/dev/null 2>&1 || true' EXIT
+
+python3 - "$SRC" <<'PY'
+import sys
+path = sys.argv[1]
+s = open(path).read()
+# Boot into level 1 instead of the menu.
+s = s.replace("  done = 1;\n  etat = 0;", "  done = 1;\n  etat = 1;", 1)
+# Drive the camera and dump frames. Placed after the flip so what is captured
+# is exactly what was presented. The flip is spelled SDL_Flip before the
+# platform wrappers land and plat_flip after, so accept either.
+flip = next((f for f in ("    plat_flip(screen);", "    SDL_Flip(screen);")
+             if f in s), None)
+if flip is None:
+    sys.exit("frame_probe: could not find the screen flip to hook")
+s = s.replace(flip, flip + """
+    {
+      static int probe_n = 0;
+      const char *probe_dir = getenv("GAIA_PROBE");
+      if (probe_dir != NULL) {
+        char probe_path[1024];
+        p.pos_background.x = 60 + probe_n * 24;
+        p1.pos_background.x = 200 + probe_n * 24;
+        if (probe_n == 0 || probe_n == 20 || probe_n == 40 ||
+            probe_n == 60 || probe_n == 80) {
+          snprintf(probe_path, sizeof(probe_path), "%s/frame_%02d.bmp",
+                   probe_dir, probe_n);
+          SDL_SaveBMP(screen, probe_path);
+        }
+        if (++probe_n > 84) {
+          done = 0;
+        }
+      }
+    }""", 1)
+open(path, "w").write(s)
+PY
+
+make -s pro >/dev/null
+rm -f "$OUT"/frame_*.bmp
+GAIA_PROBE="$OUT" timeout 30 env SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy \
+    ./pro >/dev/null 2>&1 || true
+count=$(ls -1 "$OUT"/frame_*.bmp 2>/dev/null | wc -l)
+if [ "$count" -eq 0 ]; then
+    echo "frame_probe: no frames captured" >&2
+    exit 1
+fi
+echo "captured $count frames into $OUT"

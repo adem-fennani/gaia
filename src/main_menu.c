@@ -1,7 +1,7 @@
 #include "../include/menu.h"
 #include "../include/minimap.h"
 #include "../include/perso.h"
-#include "../include/utils.h"
+#include "../include/platform.h"
 static SDL_Surface *screen = NULL;
 static image background;
 static image B_play, B_play1;
@@ -51,24 +51,14 @@ static int victory_winner = 0;
 static SDL_Rect camera;
 static void play_click_sound(void) {
   if (son != NULL) {
-    Mix_PlayChannel(-1, son, 0);
+    plat_sound_play(son);
   }
 }
+/* Thin alias over plat_text_draw, kept so the existing call sites read the
+ * same. The render-blit-free cycle now lives in the platform layer. */
 static void draw_text(SDL_Surface *target, TTF_Font *font, const char *msg,
                       int x, int y, SDL_Color color) {
-  SDL_Surface *text_surface;
-  SDL_Rect pos;
-  if (target == NULL || font == NULL || msg == NULL) {
-    return;
-  }
-  text_surface = TTF_RenderText_Solid(font, msg, color);
-  if (text_surface == NULL) {
-    return;
-  }
-  pos.x = x;
-  pos.y = y;
-  SDL_BlitSurface(text_surface, NULL, target, &pos);
-  SDL_FreeSurface(text_surface);
+  plat_text_draw(target, font, msg, x, y, color);
 }
 static SDL_Rect player_hitbox(const perso *player) {
   SDL_Rect hitbox;
@@ -109,13 +99,13 @@ static void reset_level1(void) {
   acc1 = 0;
   k = 0;
   s = 0;
-  level1_start_ticks = SDL_GetTicks();
+  level1_start_ticks = plat_ticks();
   victory_ticks = 0;
   victory_score_p = 0;
   victory_score_p1 = 0;
   victory_time_sec = 0;
   victory_winner = 0;
-  t_prev = SDL_GetTicks();
+  t_prev = plat_ticks();
 }
 static void clamp_and_resolve_obstacles(perso *player, int previous_x) {
   int i;
@@ -149,7 +139,7 @@ static int level1_completed(void) {
 static void capture_victory_stats(void) {
   victory_score_p = p.iscore / 20;
   victory_score_p1 = p1.iscore / 20;
-  victory_time_sec = (int)((SDL_GetTicks() - level1_start_ticks) / 1000);
+  victory_time_sec = (int)((plat_ticks() - level1_start_ticks) / 1000);
   victory_winner = 0;
   if (rect_overlap(player_hitbox(&p), level1_goal) &&
       rect_overlap(player_hitbox(&p1), level1_goal)) {
@@ -159,7 +149,7 @@ static void capture_victory_stats(void) {
   } else if (rect_overlap(player_hitbox(&p1), level1_goal)) {
     victory_winner = 2;
   }
-  victory_ticks = SDL_GetTicks();
+  victory_ticks = plat_ticks();
 }
 static void update_camera(void) {
   int mid_x = (p.pos_background.x + p1.pos_background.x) / 2;
@@ -197,7 +187,7 @@ static void draw_parallax_layer(SDL_Surface *target, const image *layer,
   dst.y = 0;
   dst.w = SCREEN_W;
   dst.h = SCREEN_H;
-  SDL_BlitSurface(layer->img, &src, target, &dst);
+  plat_blit(layer->img, &src, target, &dst);
 }
 
 // Blit a world-space sprite, translated into screen space. Gameplay code works
@@ -212,7 +202,7 @@ static void draw_world_sprite(SDL_Surface *target, const image *sprite, int x,
   dst.y = y;
   dst.w = sprite->img->w;
   dst.h = sprite->img->h;
-  SDL_BlitSurface(sprite->img, NULL, target, &dst);
+  plat_blit(sprite->img, NULL, target, &dst);
 }
 
 static void draw_level1_scene(SDL_Surface *target) {
@@ -238,14 +228,14 @@ static void draw_level1_scene(SDL_Surface *target) {
       dst.y = LEVEL1_GROUND_STRIP_Y;
       dst.w = ground_tile.img->w;
       dst.h = ground_tile.img->h;
-      SDL_BlitSurface(ground_tile.img, NULL, target, &dst);
+      plat_blit(ground_tile.img, NULL, target, &dst);
     }
   } else {
     ground.x = -camera.x;
     ground.y = LEVEL1_GROUND_STRIP_Y;
     ground.w = LEVEL1_W;
     ground.h = SCREEN_H - ground.y;
-    SDL_FillRect(target, &ground, SDL_MapRGB(target->format, 79, 19, 37));
+    plat_fill_rect(target, &ground, 79, 19, 37);
   }
 
   for (i = 0; i < 3; ++i) {
@@ -275,7 +265,7 @@ static void draw_victory_scene(SDL_Surface *target) {
   panel.y = 0;
   panel.w = SCREEN_W;
   panel.h = SCREEN_H;
-  SDL_FillRect(target, &panel, SDL_MapRGB(target->format, 18, 20, 42));
+  plat_fill_rect(target, &panel, 18, 20, 42);
   draw_text(target, p.police_score, "MISSION COMPLETE", 420, 120, title);
   if (victory_winner == 3) {
     draw_text(target, p.police_score,
@@ -322,23 +312,10 @@ bool init_engine(void) {
   memset(&ground_tile, 0, sizeof(image));
   memset(&m, 0, sizeof(minimap));
   memset(&t, 0, sizeof(temps));
-  if (SDL_Init(SDL_INIT_EVERYTHING) != 0) {
-    printf("FAIL SDL INIT %s\n", SDL_GetError());
+  if (!plat_init(SCREEN_W, SCREEN_H, "GAIA REPRESENT")) {
     return false;
   }
-  putenv("SDL_VIDEO_CENTERED=1");
-  screen = SDL_SetVideoMode(SCREEN_W, SCREEN_H, 32,
-                            SDL_HWSURFACE | SDL_DOUBLEBUF);
-  SDL_WM_SetCaption("GAIA REPRESENT", NULL);
-  IMG_Init(IMG_INIT_PNG);
-  if (screen == NULL) {
-    printf("Can't set video mode: %s\n", SDL_GetError());
-    return false;
-  }
-  if (Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 4096) == -1) {
-    printf("FAIL AUDIO %s\n", Mix_GetError());
-  }
-  TTF_Init();
+  screen = plat_screen();
   return true;
 }
 void load_game_resources(void) {
@@ -352,13 +329,13 @@ void load_game_resources(void) {
   backgame.pos.w = SCREEN_W;
   backgame.pos.h = SCREEN_H;
   init_background(&backgame_near, "assets/img/levels/niv1_near.png");
-  obs_crate.img = load_image_safe("assets/img/level1/crate.png");
-  obs_crate_tall.img = load_image_safe("assets/img/level1/crate_tall.png");
-  goal_beacon.img = load_image_safe("assets/img/level1/goal_beacon.png");
-  ground_tile.img = load_image_safe("assets/img/level1/ground_tile.png");
-  son = load_wav_safe("assets/audio/mouseclick.wav");
+  obs_crate.img = plat_image_load("assets/img/level1/crate.png");
+  obs_crate_tall.img = plat_image_load("assets/img/level1/crate_tall.png");
+  goal_beacon.img = plat_image_load("assets/img/level1/goal_beacon.png");
+  ground_tile.img = plat_image_load("assets/img/level1/ground_tile.png");
+  son = plat_sound_load("assets/audio/mouseclick.wav");
   if (son != NULL) {
-    Mix_VolumeChunk(son, MIX_MAX_VOLUME / 3);
+    plat_sound_volume(son, plat_music_max_volume() / 3);
   }
   init_background(&background, "assets/img/background.jpg");
   init_bouton(&B_play, "assets/img/B_play.png", &B_settings,
@@ -408,8 +385,8 @@ void run_game_loop(void) {
   while (done) {
     int prev_x_p = p.pos_background.x;
     int prev_x_p1 = p1.pos_background.x;
-    dt = SDL_GetTicks() - t_prev;
-    t_prev = SDL_GetTicks();
+    dt = plat_ticks() - t_prev;
+    t_prev = plat_ticks();
     switch (etat) {
     case 0:
       affichier_imag(background, screen);
@@ -435,7 +412,7 @@ void run_game_loop(void) {
         affichier_imag(B_quit, screen);
         break;
       }
-      while (SDL_PollEvent(&event)) {
+      while (plat_event_poll(&event)) {
         if (event.type == SDL_QUIT) {
           done = 0;
         } else if (event.type == SDL_KEYDOWN) {
@@ -507,7 +484,7 @@ void run_game_loop(void) {
       }
       break;
     case 1:
-      while (SDL_PollEvent(&event)) {
+      while (plat_event_poll(&event)) {
         if (event.type == SDL_QUIT) {
           done = 0;
         } else if (event.type == SDL_KEYDOWN) {
@@ -640,7 +617,7 @@ void run_game_loop(void) {
       }
       break;
     case 2:
-      while (SDL_PollEvent(&event)) {
+      while (plat_event_poll(&event)) {
         if (event.type == SDL_QUIT) {
           done = 0;
         } else if (event.type == SDL_KEYDOWN) {
@@ -650,14 +627,14 @@ void run_game_loop(void) {
             break;
           case SDLK_LEFT:
             v -= 9;
-            Mix_VolumeMusic(v);
+            plat_music_volume(v);
             slayed.pos.x -= 15;
             if (slayed.pos.x <= 515)
               slayed.pos.x = 515;
             break;
           case SDLK_RIGHT:
             v += 9;
-            Mix_VolumeMusic(v);
+            plat_music_volume(v);
             slayed.pos.x += 15;
             if (slayed.pos.x >= 720)
               slayed.pos.x = 720;
@@ -672,7 +649,7 @@ void run_game_loop(void) {
               event.button.y > pos_plus.y &&
               event.button.y < pos_plus.y + pos_plus.h) {
             v += 10;
-            Mix_VolumeMusic(v);
+            plat_music_volume(v);
             slayed.pos.x += 15;
             if (slayed.pos.x >= 720)
               slayed.pos.x = 720;
@@ -681,7 +658,7 @@ void run_game_loop(void) {
                      event.button.y > pos_moin.y &&
                      event.button.y < pos_moin.y + pos_moin.h) {
             v -= 10;
-            Mix_VolumeMusic(v);
+            plat_music_volume(v);
             slayed.pos.x -= 15;
             if (slayed.pos.x <= 515)
               slayed.pos.x = 515;
@@ -713,7 +690,7 @@ void run_game_loop(void) {
       }
       break;
     case 3:
-      while (SDL_PollEvent(&event)) {
+      while (plat_event_poll(&event)) {
         if (event.type == SDL_QUIT) {
           done = 0;
         } else if (event.type == SDL_KEYDOWN) {
@@ -730,7 +707,7 @@ void run_game_loop(void) {
         }
       }
       draw_victory_scene(screen);
-      if ((Uint32)(SDL_GetTicks() - victory_ticks) >= VICTORY_AUTO_RETURN_MS) {
+      if ((Uint32)(plat_ticks() - victory_ticks) >= VICTORY_AUTO_RETURN_MS) {
         reset_level1();
         etat = 0;
       }
@@ -739,11 +716,11 @@ void run_game_loop(void) {
       etat = 0;
       break;
     }
-    SDL_Flip(screen);
+    plat_flip(screen);
     if (dt > 0) {
-      SDL_Delay(300 / dt);
+      plat_delay(300 / dt);
     } else {
-      SDL_Delay(16);
+      plat_delay(16);
     }
   }
 }
@@ -759,29 +736,27 @@ void cleanup_game(void) {
   librer(slayed);
   librer(exits);
   librer(exits1);
-  if (son != NULL) {
-    Mix_FreeChunk(son);
-  }
+  plat_sound_free(son);
   if (p.police_score != NULL) {
-    TTF_CloseFont(p.police_score);
+    plat_font_close(p.police_score);
   }
   if (p1.police_score != NULL) {
-    TTF_CloseFont(p1.police_score);
+    plat_font_close(p1.police_score);
   }
   for (i = 0; i < 2; i++) {
     for (j = 0; j < 7; j++) {
       if (p.image[i][j] != NULL) {
-        SDL_FreeSurface(p.image[i][j]);
+        plat_image_free(p.image[i][j]);
       }
       if (p1.image[i][j] != NULL) {
-        SDL_FreeSurface(p1.image[i][j]);
+        plat_image_free(p1.image[i][j]);
       }
     }
   }
   if (p.barre != NULL) {
     for (i = 0; i < 6; i++) {
       if (p.barre[i] != NULL) {
-        SDL_FreeSurface(p.barre[i]);
+        plat_image_free(p.barre[i]);
       }
     }
     free(p.barre);
@@ -789,7 +764,7 @@ void cleanup_game(void) {
   if (p1.barre != NULL) {
     for (i = 0; i < 6; i++) {
       if (p1.barre[i] != NULL) {
-        SDL_FreeSurface(p1.barre[i]);
+        plat_image_free(p1.barre[i]);
       }
     }
     free(p1.barre);
@@ -797,32 +772,30 @@ void cleanup_game(void) {
   // Level 1 scene art. Freed here alongside backgame because every resource
   // for every state is loaded up front and released in one place.
   if (backgame.img != NULL) {
-    SDL_FreeSurface(backgame.img);
+    plat_image_free(backgame.img);
   }
   if (backgame_near.img != NULL) {
-    SDL_FreeSurface(backgame_near.img);
+    plat_image_free(backgame_near.img);
   }
   if (obs_crate.img != NULL) {
-    SDL_FreeSurface(obs_crate.img);
+    plat_image_free(obs_crate.img);
   }
   if (obs_crate_tall.img != NULL) {
-    SDL_FreeSurface(obs_crate_tall.img);
+    plat_image_free(obs_crate_tall.img);
   }
   if (goal_beacon.img != NULL) {
-    SDL_FreeSurface(goal_beacon.img);
+    plat_image_free(goal_beacon.img);
   }
   if (ground_tile.img != NULL) {
-    SDL_FreeSurface(ground_tile.img);
+    plat_image_free(ground_tile.img);
   }
   if (p.score != NULL) {
-    SDL_FreeSurface(p.score);
+    plat_image_free(p.score);
   }
   if (p1.score != NULL) {
-    SDL_FreeSurface(p1.score);
+    plat_image_free(p1.score);
   }
-  TTF_Quit();
-  IMG_Quit();
-  SDL_Quit();
+  plat_shutdown();
 }
 int main(void) {
   if (!init_engine()) {

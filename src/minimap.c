@@ -9,7 +9,7 @@
  *
  */
 #include "../include/minimap.h"
-#include "../include/utils.h"
+#include "../include/platform.h"
 #include <SDL/SDL.h>
 #include <SDL/SDL_image.h>
 #include <SDL/SDL_ttf.h>
@@ -22,10 +22,10 @@
  * @return Nothing
  */
 void initmap(minimap *m) {
-  m->img = load_image_safe("assets/img/minimap.png");
+  m->img = plat_image_load("assets/img/minimap.png");
   m->pos.x = 576;
   m->pos.y = 20;
-  m->perso_img = load_image_safe("assets/img/fleche.png");
+  m->perso_img = plat_image_load("assets/img/fleche.png");
   m->perso_pos.x = 576;
   m->perso_pos.y = 94;
 }
@@ -36,14 +36,14 @@ void initmap(minimap *m) {
  * @return Nothing
  */
 void init_background_minimap(backg *bg) {
-  bg->img = load_image_safe("assets/img/Ressources/background_2.png");
+  bg->img = plat_image_load("assets/img/Ressources/background_2.png");
   if (bg->img == NULL) {
     printf("Error opening: %s\n", SDL_GetError());
     return;
   }
   bg->pos.x = 0;
   bg->pos.y = 0;
-  bg->masque = load_image_safe("assets/img/Ressources/masque.png");
+  bg->masque = plat_image_load("assets/img/Ressources/masque.png");
   if (bg->masque == NULL) {
     printf("Error opening: %s\n", SDL_GetError());
     return;
@@ -61,7 +61,7 @@ void init_background_minimap(backg *bg) {
 /*
 void init_perso(perso* perso)
 {
-        perso->img = load_image_safe("assets/img/Ressources/perso.png");
+        perso->img = plat_image_load("assets/img/Ressources/perso.png");
         if (perso->img == NULL)
         {
                 printf("Error opening: %s\n", SDL_GetError());
@@ -75,19 +75,19 @@ void init_perso(perso* perso)
 */
 
 void afficher_background(backg background, SDL_Surface *screen) {
-  SDL_BlitSurface(background.img, NULL, screen, &background.pos);
+  plat_blit(background.img, NULL, screen, &background.pos);
 }
 
 /*
 void afficher_perso(perso perso, SDL_Surface* screen)
 {
-        SDL_BlitSurface(perso.img, NULL, screen, &perso.pos);
+        plat_blit(perso.img, NULL, screen, &perso.pos);
 }
 */
 
 void afficherminimap(minimap m, SDL_Surface *screen) {
-  SDL_BlitSurface(m.img, NULL, screen, &m.pos);
-  SDL_BlitSurface(m.perso_img, NULL, screen, &m.perso_pos);
+  plat_blit(m.img, NULL, screen, &m.pos);
+  plat_blit(m.perso_img, NULL, screen, &m.perso_pos);
 }
 
 SDL_Color GetPixel(SDL_Surface *surf, int x, int y) {
@@ -156,8 +156,8 @@ void MAJminimap(int pas, int direc, minimap *m, int redim) {
 }
 
 void minuteur(int *deb) {
-  if (SDL_GetTicks() - *deb >= 1000) {
-    *deb = SDL_GetTicks();
+  if (plat_ticks() - *deb >= 1000) {
+    *deb = plat_ticks();
   }
 }
 
@@ -166,7 +166,7 @@ int charger_font(text *t, char *fich) {
     printf("Error initializing TTF_Init : %s\n", TTF_GetError());
     return -1;
   }
-  t->police = TTF_OpenFont(fich, 40);
+  t->police = plat_font_open(fich, 40);
   if (t->police == NULL) {
     printf("Unable to load Font: %s\n", SDL_GetError());
     return (-1);
@@ -189,7 +189,7 @@ int init_text_temps(text *t) {
 
 int init_temps(temps *t) {
   int test;
-  t->deb = SDL_GetTicks();
+  t->deb = plat_ticks();
   t->min = 0;
   t->sec = 0;
   test = init_text_temps(&t->text);
@@ -214,38 +214,38 @@ void MAJ_temps(temps *t) {
 }
 
 void afficher_temps(temps t, SDL_Surface *screen) {
-  SDL_BlitSurface(t.text.surf, NULL, screen, &(t.text.pos));
+  plat_blit(t.text.surf, NULL, screen, &(t.text.pos));
 }
 
 void liberer_text(text t) {
   if (t.police != NULL) {
-    TTF_CloseFont(t.police);
+    plat_font_close(t.police);
   }
   TTF_Quit();
 }
 
 void liberer_backg(backg b) {
   if (b.img != NULL) {
-    SDL_FreeSurface(b.img);
+    plat_image_free(b.img);
   }
   if (b.masque != NULL) {
-    SDL_FreeSurface(b.masque);
+    plat_image_free(b.masque);
   }
 }
 
 /*
 void liberer_perso(perso p)
 {
-        SDL_FreeSurface(p.img);
+        plat_image_free(p.img);
 }
 */
 
 void liberer_minimap(minimap m) {
   if (m.img != NULL) {
-    SDL_FreeSurface(m.img);
+    plat_image_free(m.img);
   }
   if (m.perso_img != NULL) {
-    SDL_FreeSurface(m.perso_img);
+    plat_image_free(m.perso_img);
   }
 }
 
@@ -265,10 +265,10 @@ void quitgame(int *q, tic c) {
 }
 
 void init(tic *c) {
-  c->table = load_image_safe("assets/img/Ressources/xo.png");
-  c->t[0] = load_image_safe("assets/img/Ressources/X.png");
-  c->t[1] = load_image_safe("assets/img/Ressources/O.png");
-  c->bg = load_image_safe("assets/img/Ressources/white.jpeg");
+  c->table = plat_image_load("assets/img/Ressources/xo.png");
+  c->t[0] = plat_image_load("assets/img/Ressources/X.png");
+  c->t[1] = plat_image_load("assets/img/Ressources/O.png");
+  c->bg = plat_image_load("assets/img/Ressources/white.jpeg");
   if (c->t[1] == NULL)
     printf("Affichage réussi\n");
   for (int i = 0; i < 3; i++)
@@ -283,19 +283,19 @@ void init(tic *c) {
 }
 
 void show(tic c, SDL_Surface *screen) {
-  SDL_BlitSurface(c.bg, NULL, screen, NULL);
-  SDL_BlitSurface(c.table, NULL, screen, NULL);
+  plat_blit(c.bg, NULL, screen, NULL);
+  plat_blit(c.table, NULL, screen, NULL);
   for (int i = 0; i < 3; i++) {
     for (int j = 0; j < 3; j++) {
       if (c.i[i][j] != -1) {
-        SDL_BlitSurface(c.t[c.i[i][j]], NULL, screen, &c.r[i][j]);
+        plat_blit(c.t[c.i[i][j]], NULL, screen, &c.r[i][j]);
       }
       if ((c.choixx == i) && (c.choixy == j)) {
-        SDL_BlitSurface(c.t[c.turn], NULL, screen, &c.r[i][j]);
+        plat_blit(c.t[c.turn], NULL, screen, &c.r[i][j]);
       }
     }
   }
-  SDL_Flip(screen);
+  plat_flip(screen);
 }
 
 void turn_played(tic *c) {
@@ -305,7 +305,7 @@ void turn_played(tic *c) {
 }
 
 void change(tic *c) {
-  SDL_Delay(100);
+  plat_delay(100);
   Uint8 *keystate = SDL_GetKeyState(NULL);
   if (keystate[SDLK_RIGHT])
     if (c->choixx < 2)
@@ -345,7 +345,7 @@ int winner_is(tic c) {
 void ia2(tic *c) {
   int count = 0;
   if (c->turn == 1) {
-    SDL_Delay(500);
+    plat_delay(500);
     for (int i = 0; i < 2; i++) {
       for (int j = 0; j < 3; j++) {
         count = 0;
@@ -430,11 +430,11 @@ int game(SDL_Surface *screen) {
     show(c, screen);
     if (winner_is(c) != -1) {
       if (winner_is(c) == 1)
-        SDL_Flip(screen);
-      SDL_Delay(1000);
+        plat_flip(screen);
+      plat_delay(1000);
       return winner_is(c);
     }
   }
-  SDL_Delay(1000);
+  plat_delay(1000);
   return -1;
 }
