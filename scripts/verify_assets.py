@@ -1,0 +1,312 @@
+#!/usr/bin/env python3
+"""Validate that every asset the game loads actually exists and is readable.
+
+Three checks, each one corresponding to a bug that reached main:
+
+  1. Path case. Every "assets/..." literal in src/*.c must resolve on a
+     case-sensitive filesystem. src/minimap.c shipped seven literals spelling
+     "ressources" while the directory is "Ressources", which made init_temps()
+     fail at boot with the font never loading.
+
+  2. PNG integrity. Chunk CRCs and a terminating IEND. The README long claimed
+     assets were corrupt and that libpng aborted on them; this check is what
+     turns that question into a build result instead of a rumour.
+
+  3. Declared dimensions, against assets/MANIFEST.tsv. draw_level1_scene()
+     blits a 1150x650 source rect out of a 2048x341 Niv1.png, so the bottom
+     309px of the screen was never written. A backdrop too small to cover the
+     screen should fail the build, not render garbage.
+
+Exits non-zero on any failure. Run via `make verify`.
+"""
+
+import glob
+import os
+import re
+import struct
+import sys
+import zlib
+
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+SRC_GLOB = os.path.join(ROOT, "src", "*.c")
+MANIFEST = os.path.join(ROOT, "assets", "MANIFEST.tsv")
+
+# Matches a double-quoted literal that looks like an asset path. printf-style
+# conversions are kept so they can be expanded to a glob below.
+ASSET_LITERAL = re.compile(r'"(assets/[^"\n]*)"')
+# Only %d/%i/%s appear in this codebase's sprintf asset paths.
+CONVERSION = re.compile(r"%[0-9.]*[dis]")
+
+errors = []
+warnings = []
+
+# Assets the game probes for but works without. Everything else must exist:
+# a missing required asset is a build failure, since load_image_safe() would
+# otherwise hide it behind a placeholder checkerboard at runtime.
+#
+# music.ogg is optional because SDL_mixer 1.2's MP3 decoder overruns its own
+# buffer (see the comment in src/audio.c). The game prefers an OGG track if one
+# is present and falls back to the MP3 otherwise, so shipping the OGG is a fix
+# you can drop in without touching code.
+OPTIONAL = {"assets/audio/music.ogg"}
+
+
+def strip_comments(text):
+    """Remove /*...*/ and //... so commented-out loads are not treated as live."""
+    text = re.sub(r"/\*.*?\*/", "", text, flags=re.DOTALL)
+    text = re.sub(r"//[^\n]*", "", text)
+    return text
+
+
+def collect_literals():
+    """Map each asset path literal to the source locations that reference it."""
+    found = {}
+    for path in sorted(glob.glob(SRC_GLOB)):
+        raw = open(path, encoding="utf-8", errors="replace").read()
+        live = strip_comments(raw)
+        rel = os.path.relpath(path, ROOT)
+        # Line numbers come from the raw text so they match the real file.
+        lines = raw.splitlines()
+        for literal in ASSET_LITERAL.findall(live):
+            where = found.setdefault(literal, [])
+            for n, line in enumerate(lines, 1):
+                if '"' + literal + '"' in line:
+                    where.append(f"{rel}:{n}")
+    return found
+
+
+def check_paths(found):
+    """Every literal must resolve case-sensitively; formats must match >=1 file."""
+    for literal, where in sorted(found.items()):
+        sites = ", ".join(where) if where else "unknown"
+        if CONVERSION.search(literal):
+            # "image%d-%d.png" -> "image*-*.png"; the glob is case-sensitive,
+            # so a wrong-case directory yields zero matches.
+            pattern = CONVERSION.sub("*", literal)
+            if not glob.glob(os.path.join(ROOT, pattern)):
+                errors.append(
+                    f"{sites}: pattern '{literal}' matches no file on disk"
+                )
+            continue
+
+        if literal in OPTIONAL:
+            if not os.path.exists(os.path.join(ROOT, literal)):
+                warnings.append(f"{literal} is absent (optional)")
+            continue
+
+        full = os.path.join(ROOT, literal)
+        if not os.path.exists(full):
+            # Distinguish a wrong-case path from a genuinely absent one, since
+            # the fix differs and the symptom at runtime is identical.
+            hint = case_hint(literal)
+            errors.append(f"{sites}: '{literal}' does not exist{hint}")
+        elif not os.path.isfile(full):
+            errors.append(f"{sites}: '{literal}' is not a regular file")
+
+
+def case_hint(literal):
+    """If only the case is wrong, say so and name the path that would work."""
+    parts = literal.split("/")
+    resolved = ROOT
+    for i, part in enumerate(parts):
+        candidate = os.path.join(resolved, part)
+        if os.path.exists(candidate):
+            resolved = candidate
+            continue
+        try:
+            siblings = os.listdir(resolved)
+        except OSError:
+            return ""
+        match = next((s for s in siblings if s.lower() == part.lower()), None)
+        if match is None:
+            return ""
+        fixed = "/".join(parts[:i] + [match] + parts[i + 1:])
+        return f" (case mismatch: did you mean '{fixed}'?)"
+    return ""
+
+
+def png_dimensions(path):
+    """Validate every chunk CRC, require IEND, and return (width, height)."""
+    data = open(path, "rb").read()
+    if data[:8] != b"\x89PNG\r\n\x1a\n":
+        raise ValueError("not a PNG (bad signature)")
+
+    offset, seen, size = 8, [], None
+    while offset + 8 <= len(data):
+        length = struct.unpack(">I", data[offset:offset + 4])[0]
+        ctype = data[offset + 4:offset + 8].decode("latin1")
+        body_end = offset + 8 + length
+        crc_bytes = data[body_end:body_end + 4]
+        if len(crc_bytes) < 4:
+            raise ValueError(f"chunk '{ctype}' is truncated")
+        want = struct.unpack(">I", crc_bytes)[0]
+        got = zlib.crc32(data[offset + 4:body_end]) & 0xFFFFFFFF
+        if want != got:
+            raise ValueError(f"chunk '{ctype}' has a bad CRC")
+        if ctype == "IHDR":
+            size = struct.unpack(">II", data[offset + 8:offset + 16])
+        seen.append(ctype)
+        offset = body_end + 4
+
+    if "IHDR" not in seen:
+        raise ValueError("no IHDR chunk")
+    if "IEND" not in seen:
+        raise ValueError("no IEND chunk (file is truncated)")
+    if offset != len(data):
+        raise ValueError(f"{len(data) - offset} trailing bytes after IEND")
+    return size
+
+
+def check_pngs():
+    """Integrity-check every PNG in assets/, not just the referenced ones."""
+    pngs = sorted(glob.glob(os.path.join(ROOT, "assets", "**", "*.png"),
+                            recursive=True))
+    if not pngs:
+        errors.append("assets/: no PNG files found at all")
+    sizes = {}
+    for path in pngs:
+        rel = os.path.relpath(path, ROOT)
+        try:
+            sizes[rel] = png_dimensions(path)
+        except (ValueError, OSError) as exc:
+            errors.append(f"{rel}: {exc}")
+    return sizes
+
+
+def check_manifest(sizes):
+    """Enforce assets/MANIFEST.tsv: path, width, height, role."""
+    if not os.path.exists(MANIFEST):
+        warnings.append(
+            "assets/MANIFEST.tsv is absent; skipping dimension checks")
+        return
+    for n, line in enumerate(open(MANIFEST, encoding="utf-8"), 1):
+        line = line.rstrip("\n")
+        if not line.strip() or line.lstrip().startswith("#"):
+            continue
+        fields = line.split("\t")
+        if len(fields) < 3:
+            errors.append(
+                f"MANIFEST.tsv:{n}: expected path<TAB>w<TAB>h<TAB>role")
+            continue
+        rel, want_w, want_h = fields[0], fields[1], fields[2]
+        if not os.path.exists(os.path.join(ROOT, rel)):
+            errors.append(f"MANIFEST.tsv:{n}: '{rel}' does not exist")
+            continue
+        if rel not in sizes:
+            # Non-PNG entries (fonts, audio) only need to exist.
+            continue
+        got_w, got_h = sizes[rel]
+        if (str(got_w), str(got_h)) != (want_w, want_h):
+            errors.append(
+                f"MANIFEST.tsv:{n}: '{rel}' is {got_w}x{got_h}, "
+                f"manifest declares {want_w}x{want_h}")
+
+
+# Mirrors src/main_menu.c and include/perso.h. The backdrop geometry check
+# below is what makes issue #14 un-regressable: a layer too small to cover the
+# source rect the camera asks for is a build failure, not a rendering artifact.
+SCREEN_W, SCREEN_H = 1150, 650
+LEVEL1_W = 2300
+PARALLAX_LAYERS = {
+    "assets/img/levels/niv1_far.png": 0.5,
+    "assets/img/levels/niv1_near.png": 0.75,
+}
+
+
+def check_backdrop_geometry(sizes):
+    """A parallax layer must cover the widest source rect the camera requests.
+
+    draw_level1_scene() blits a SCREEN_W x SCREEN_H rect at x = camera.x * rate.
+    camera.x runs to LEVEL1_W - SCREEN_W, so the layer needs
+    (LEVEL1_W - SCREEN_W) * rate + SCREEN_W pixels of width and SCREEN_H of
+    height. Niv1.png satisfied neither -- it is 2048x341, so the bottom 309
+    rows of every frame went unwritten.
+    """
+    for rel, rate in sorted(PARALLAX_LAYERS.items()):
+        if rel not in sizes:
+            if os.path.exists(os.path.join(ROOT, rel)):
+                continue          # present but not a PNG; nothing to measure
+            warnings.append(f"{rel} is absent; skipping geometry check")
+            continue
+        got_w, got_h = sizes[rel]
+        need_w = int((LEVEL1_W - SCREEN_W) * rate) + SCREEN_W
+        if got_w < need_w:
+            errors.append(
+                f"{rel}: {got_w}px wide, but parallax rate {rate} needs "
+                f"{need_w}px (camera.x reaches {LEVEL1_W - SCREEN_W})")
+        if got_h < SCREEN_H:
+            errors.append(
+                f"{rel}: {got_h}px tall, but the screen is {SCREEN_H}px "
+                f"(this is the issue #14 failure mode)")
+
+
+def manifest_paths():
+    """Paths the manifest declares, including the generator's inputs."""
+    declared = set()
+    if not os.path.exists(MANIFEST):
+        return declared
+    for line in open(MANIFEST, encoding="utf-8"):
+        if line.strip() and not line.lstrip().startswith("#"):
+            declared.add(line.split("\t")[0])
+    return declared
+
+
+def report_unreferenced(found):
+    """List assets nothing loads and the manifest does not claim.
+
+    Not an error: unused art is a housekeeping question, not a broken build.
+    But it should be visible, because deleting the wrong file here breaks the
+    generator rather than the game -- assets/img/Niv1.png and the barre art
+    are inputs to scripts/gen_placeholder_assets.py, loaded by nothing at
+    runtime, and the manifest records them so they read as intentional.
+    """
+    referenced = set()
+    for literal in found:
+        if CONVERSION.search(literal):
+            pattern = CONVERSION.sub("*", literal)
+            for hit in glob.glob(os.path.join(ROOT, pattern)):
+                referenced.add(os.path.relpath(hit, ROOT))
+        else:
+            referenced.add(literal)
+
+    declared = manifest_paths()
+    on_disk = set()
+    for path in glob.glob(os.path.join(ROOT, "assets", "**", "*"),
+                          recursive=True):
+        if os.path.isfile(path):
+            on_disk.add(os.path.relpath(path, ROOT))
+
+    orphans = sorted(on_disk - referenced - declared -
+                     {"assets/MANIFEST.tsv"})
+    if orphans:
+        print(f"note: {len(orphans)} asset(s) are loaded by nothing and not "
+              f"declared in MANIFEST.tsv:")
+        for orphan in orphans:
+            print(f"  unused  {orphan}")
+
+
+def main():
+    found = collect_literals()
+    if not found:
+        errors.append("no asset path literals found in src/*.c (parser broken?)")
+    check_paths(found)
+    sizes = check_pngs()
+    check_manifest(sizes)
+    check_backdrop_geometry(sizes)
+    report_unreferenced(found)
+
+    for warning in warnings:
+        print(f"warning: {warning}")
+
+    if errors:
+        print(f"\nFAIL: {len(errors)} asset problem(s):\n", file=sys.stderr)
+        for err in errors:
+            print(f"  {err}", file=sys.stderr)
+        return 1
+
+    print(f"OK: {len(found)} asset references, {len(sizes)} PNGs validated")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

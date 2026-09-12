@@ -14,13 +14,13 @@ typedef struct {
   SDL_Rect pos;
 } image;
 
-// ken enty fil menu
+// Main menu screen
 
 void init_background(image *background, char *nom);
 void init_bouton(image *bouton1, char *nom1, image *bouton2, char *nom2,
                  image *bouton3, char *nom3);
 
-// ken enty fil setting
+// Settings screen
 void init_volume_slayed(image *bouton_slide, char *nom);
 void init_retour_bouton(image *retour, char *nom);
 // void init_boutons(image *retour,char *nom);

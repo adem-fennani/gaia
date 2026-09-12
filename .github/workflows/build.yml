@@ -1,0 +1,65 @@
+name: build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: ${{ matrix.os }} (${{ matrix.sdl }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Two genuinely different runtimes, not two copies of one.
+          #
+          # 22.04 carries real SDL 1.2 (1.2.15, the final upstream release).
+          # 24.04+ ships sdl12-compat, which reimplements the SDL 1.2 API on
+          # top of SDL2 -- so on a current distro this game is already running
+          # against SDL2 through a translation layer. That is the actual
+          # compatibility surface the "modern Linux quirks" reports come from,
+          # so both rows need to stay green.
+          - os: ubuntu-22.04
+            sdl: real SDL 1.2
+          - os: ubuntu-latest
+            sdl: sdl12-compat
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install SDL 1.2 development libraries
+        run: |
+          sudo apt-get update
+          # libsdl1.2-dev is the real library on 22.04 and a sdl12-compat
+          # package on newer releases. Where it has been dropped entirely,
+          # fall back to the explicitly-named compat package.
+          sudo apt-get install -y --no-install-recommends \
+            build-essential libsdl-image1.2-dev libsdl-mixer1.2-dev \
+            libsdl-ttf2.0-dev
+          sudo apt-get install -y --no-install-recommends libsdl1.2-dev \
+            || sudo apt-get install -y --no-install-recommends libsdl1.2-compat-dev
+
+      - name: Report the SDL implementation actually in use
+        run: |
+          sdl-config --version
+          dpkg-query -W -f='${source:Package} ${Version}\n' \
+            'libsdl1.2*dev' 2>/dev/null || true
+
+      - name: Build with warnings as errors
+        run: make strict
+
+      - name: Verify assets
+        run: make verify
+
+      - name: Headless boot smoke test
+        run: ./scripts/smoke_boot.sh
+
+      - name: Confirm which SDL the binary linked against
+        if: always()
+        run: ldd ./pro | grep -iE 'sdl' || true

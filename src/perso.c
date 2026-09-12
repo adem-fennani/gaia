@@ -1,5 +1,5 @@
 #include "../include/perso.h"
-#include "../include/utils.h"
+#include "../include/platform.h"
 #include <stdio.h>
 
 #include <SDL/SDL_error.h>
@@ -7,6 +7,8 @@
 #include <SDL/SDL_ttf.h>
 #include <SDL/SDL_video.h>
 #include <stdlib.h>
+
+static void compute_frame_anchors(const perso *p);
 
 void initPerso(perso *p) {
   int i, j;
@@ -16,7 +18,7 @@ void initPerso(perso *p) {
   for (i = 0; i < 2; i++) {
     for (j = 0; j < 7; j++) {
       sprintf(pers, "assets/img/perso/image%d-%d.png", i, j);
-      p->image[i][j] = load_image_safe(pers);
+      p->image[i][j] = plat_image_load(pers);
       if (p->image[i][j] == NULL) {
         printf("Error loading perso surface %d-%d: %s\n", i, j,
                SDL_GetError());
@@ -32,15 +34,15 @@ void initPerso(perso *p) {
     return;
   }
   for (i = 0; i < 6; i++) {
-    sprintf(pers, "assets/img/barre/barre_%d.png", i);
-    p->barre[i] = load_image_safe(pers);
+    sprintf(pers, "assets/img/hud/barre/barre_%d.png", i);
+    p->barre[i] = plat_image_load(pers);
     if (p->barre[i] == NULL) {
       printf("Error loading barre surface %d: %s\n", i, SDL_GetError());
     }
   }
   printf("DEBUG: initPerso: Health bars created\n");
   fflush(stdout);
-  p->police_score = TTF_OpenFont("assets/fonts/Raimen.ttf", 40);
+  p->police_score = plat_font_open("assets/fonts/Raimen.ttf", 40);
   if (p->police_score == NULL) {
     printf("Error loading font Raimen.ttf: %s\n", TTF_GetError());
   }
@@ -53,115 +55,123 @@ void initPerso(perso *p) {
   p->pos_barre.y = 0;
   p->direction = 0;
   p->imag = 0;
-  p->pos_background.x = 60;
-  p->pos_background.y = 300;
-  p->pos_background.w = 219;
-  p->pos_background.h = 305;
+  p->wx = 60;
+  p->wy = LEVEL1_GROUND_STRIP_Y - PLAYER_BOX_H;
+  p->on_ground = 1;
+  p->anim_acc = 0;
+  perso_sync_rect(p);
+  compute_frame_anchors(p);
   p->acceleration = 0;
-  p->vitesse = 1;
+  p->vitesse = PLAYER_WALK_SPEED;
   p->up = 0;
   p->iscore = 0;
   p->vie = 5;
 
-  p->vect_x = 5;
-  p->vect_grav = 0.4;
-  p->vect_y = -6.5;
+  p->vect_x = 0;
+  p->vect_grav = PLAYER_GRAVITY;
+  p->vect_y = 0;
   p->jump = 0;
   printf("DEBUG: initPerso: Complete\n");
   fflush(stdout);
 }
 
-void afficherPerso(perso p, SDL_Surface *screen, int camera_x) {
-  SDL_Rect screen_pos;
-  screen_pos = p.pos_background;
-  screen_pos.x -= camera_x;
-  if (p.image[p.direction][p.imag] != NULL) {
-    SDL_BlitSurface(p.image[p.direction][p.imag], NULL, screen, &screen_pos);
-  } else {
-    printf("Warning: perso image [%d][%d] is NULL\n", p.direction, p.imag);
-  }
+/* Foot anchor per frame, in surface coordinates: the horizontal centre of the
+ * frame's lowest opaque band. Both players share the same art, so this is
+ * computed once and indexed [direction][frame].
+ *
+ * Needed because the art is tightly cropped with no consistent registration
+ * point -- the idle frame is 99px wide and a mid-stride frame is 205px, so
+ * blitting every frame at the same x makes the character lurch sideways as it
+ * walks. Anchoring on the feet keeps the contact point still. */
+static int frame_anchor[2][7];
+static int frame_anchor_ready = 0;
 
-  if (p.barre != NULL && p.vie < 6 && p.barre[p.vie] != NULL) {
-    SDL_BlitSurface(p.barre[p.vie], NULL, screen, &p.pos_barre);
-  } else if (p.barre != NULL) {
-    printf("Warning: barre[%d] is NULL or invalid\n", p.vie);
+static void compute_frame_anchors(const perso *p) {
+  int i, j;
+  if (frame_anchor_ready) {
+    return;
   }
-
-  sprintf(p.scor, "score:%d", p.iscore / 20);
-  if (p.police_score != NULL) {
-    p.score = TTF_RenderText_Solid(p.police_score, p.scor, p.color_score);
-    if (p.score != NULL) {
-      SDL_BlitSurface(p.score, NULL, screen, &p.pos_score);
+  for (i = 0; i < 2; i++) {
+    for (j = 0; j < 7; j++) {
+      frame_anchor[i][j] = plat_surface_foot_anchor(p->image[i][j]);
     }
   }
+  frame_anchor_ready = 1;
 }
 
-void animerPerso(perso *p) {
-  p->imag++;
-  if (p->imag >= 7)
-    p->imag = 1;
+void perso_sync_rect(perso *p) {
+  p->pos_background.x = (Sint16)p->wx;
+  p->pos_background.y = (Sint16)p->wy;
+  p->pos_background.w = PLAYER_BOX_W;
+  p->pos_background.h = PLAYER_BOX_H;
 }
 
-void deplacerPerso(perso *p, Uint32 dt) {
-  double dx;
-  dx = 0.5 * p->acceleration * dt * dt + p->vitesse * dt;
+double perso_speed(const perso *p) {
+  double speed = PLAYER_WALK_SPEED + p->acceleration;
+  if (speed < 0) {
+    speed = 0;
+  }
+  return (p->direction == 1) ? -speed : speed;
+}
 
-  switch (p->direction) {
+int perso_jump(perso *p) {
+  /* Only from the ground: the old code set up=1 on any press, so holding the
+   * key climbed indefinitely. */
+  if (!p->on_ground) {
+    return 0;
+  }
+  p->vect_y = -PLAYER_JUMP_SPEED;
+  p->on_ground = 0;
+  p->up = 1;
+  p->jump = 1;
+  return 1;
+}
 
-  case 0:
-    p->pos_background.x += dx;
-    if (p->pos_background.x >= LEVEL1_W - 219) {
-      p->pos_background.x = LEVEL1_W - 219;
+/* Draws the character only. The health bar and score moved to src/hud.c,
+ * which owns HUD layout.
+ *
+ * Taking perso by value is what made the old version leak: it rendered the
+ * score with TTF_RenderText_Solid and assigned the result to p.score on the
+ * caller's *copy*, so the surface's only pointer died on return -- two
+ * surfaces per frame, forever, while cleanup_game() dutifully freed the
+ * always-NULL originals. A const pointer makes that class of mistake
+ * impossible. perso.score and perso.scor are now unused. */
+void afficherPerso(const perso *p, SDL_Surface *screen, int camera_x) {
+  SDL_Rect dst;
+  SDL_Surface *frame;
+  int dir, idx;
+  if (p == NULL || screen == NULL) {
+    return;
+  }
+  dir = (p->direction == 1) ? 1 : 0;
+  idx = p->imag;
+  if (idx < 0 || idx > 6) {
+    idx = 0;
+  }
+  frame = p->image[dir][idx];
+  if (frame == NULL) {
+    return;
+  }
+  /* Anchored on the feet and bottom-aligned to the collision box, so the
+   * character stands on the floor instead of 80px inside it -- and stays put
+   * horizontally as the frame width changes through the walk cycle. */
+  dst.x = (Sint16)(p->wx + PLAYER_BOX_W / 2 - frame_anchor[dir][idx] -
+                   camera_x);
+  dst.y = (Sint16)(p->wy + PLAYER_BOX_H - frame->h);
+  dst.w = frame->w;
+  dst.h = frame->h;
+  plat_blit(frame, NULL, screen, &dst);
+}
+
+void animerPerso(perso *p, double dt_seconds) {
+  p->anim_acc += dt_seconds;
+  while (p->anim_acc >= 1.0 / PLAYER_ANIM_FPS) {
+    p->anim_acc -= 1.0 / PLAYER_ANIM_FPS;
+    p->imag++;
+    /* Frame 0 is the standing pose; the walk cycle is frames 1-6. */
+    if (p->imag >= 7) {
+      p->imag = 1;
     }
-    break;
-
-  case 1:
-    p->pos_background.x -= dx;
-    if (p->pos_background.x <= 0) {
-      p->pos_background.x = 0;
-    }
-    break;
-
-  default:
-    break;
-  }
-}
-
-void saut(perso *p, int posy) {
-  if (p->up == 1) {
-    if (p->jump == 1) {
-      switch (p->direction) {
-      case 0:
-        p->pos_background.x += p->vect_x;
-        break;
-      case 1:
-        p->pos_background.x -= p->vect_x;
-        break;
-      default:
-        break;
-      }
-    }
-    p->pos_background.y += p->vect_y;
-    p->vect_y += p->vect_grav;
-  }
-  if (p->pos_background.y > posy) {
-    p->vect_y = -6.5;
-    p->up = 0;
-    p->jump = 0;
-    p->pos_background.y = posy;
-  }
-
-  if (p->pos_background.x <= 0) {
-    p->pos_background.x = 0;
-  }
-  if (p->pos_background.x >= LEVEL1_W - 219) {
-    p->pos_background.x = LEVEL1_W - 219;
-  }
-}
-
-void ypos_jump(perso p, int *posy) {
-  if (p.up == 0) {
-    *posy = p.pos_background.y;
   }
 }
 
@@ -173,7 +183,7 @@ void initPerso1(perso *p) {
   for (i = 0; i < 2; i++) {
     for (j = 0; j < 7; j++) {
       sprintf(pers, "assets/img/perso/image%d-%d.png", i, j);
-      p->image[i][j] = load_image_safe(pers);
+      p->image[i][j] = plat_image_load(pers);
       if (p->image[i][j] == NULL) {
         printf("Error loading perso surface for player 2 %d-%d: %s\n", i, j,
                SDL_GetError());
@@ -189,15 +199,15 @@ void initPerso1(perso *p) {
     return;
   }
   for (i = 0; i < 6; i++) {
-    sprintf(pers, "assets/img/barre1/barre_%d.png", i);
-    p->barre[i] = load_image_safe(pers);
+    sprintf(pers, "assets/img/hud/barre1/barre_%d.png", i);
+    p->barre[i] = plat_image_load(pers);
     if (p->barre[i] == NULL) {
       printf("Error loading barre1 surface %d: %s\n", i, SDL_GetError());
     }
   }
   printf("DEBUG: initPerso1: Health bars created\n");
   fflush(stdout);
-  p->police_score = TTF_OpenFont("assets/fonts/Raimen.ttf", 40);
+  p->police_score = plat_font_open("assets/fonts/Raimen.ttf", 40);
   if (p->police_score == NULL) {
     printf("Error loading font Raimen.ttf: %s\n", TTF_GetError());
   }
@@ -210,19 +220,21 @@ void initPerso1(perso *p) {
   p->pos_barre.y = 0;
   p->direction = 0;
   p->imag = 0;
-  p->pos_background.x = 200;
-  p->pos_background.y = 300;
-  p->pos_background.w = 219;
-  p->pos_background.h = 305;
+  p->wx = 200;
+  p->wy = LEVEL1_GROUND_STRIP_Y - PLAYER_BOX_H;
+  p->on_ground = 1;
+  p->anim_acc = 0;
+  perso_sync_rect(p);
+  compute_frame_anchors(p);
   p->acceleration = 0;
-  p->vitesse = 1;
+  p->vitesse = PLAYER_WALK_SPEED;
   p->up = 0;
   p->iscore = 0;
   p->vie = 5;
 
-  p->vect_x = 5;
-  p->vect_grav = 0.4;
-  p->vect_y = -6.5;
+  p->vect_x = 0;
+  p->vect_grav = PLAYER_GRAVITY;
+  p->vect_y = 0;
   p->jump = 0;
   printf("DEBUG: initPerso1: Complete\n");
   fflush(stdout);
