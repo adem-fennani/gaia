@@ -10,7 +10,12 @@ static image B_quit, B_quit1;
 static image settings;
 static image slayed;
 static image exits, exits1;
-static image backgame;
+static image backgame;      // level 1 far parallax layer
+static image backgame_near; // level 1 near parallax layer
+static image obs_crate;     // obstacle art for level1_obstacles[0] and [2]
+static image obs_crate_tall;// obstacle art for level1_obstacles[1]
+static image goal_beacon;   // mission exit art for level1_goal
+static image ground_tile;   // tileable ground strip
 static SDL_Rect pos_plus, pos_moin;
 static minimap m;
 static temps t;
@@ -24,7 +29,17 @@ static Uint32 dt = 0, t_prev = 0;
 #define SCREEN_W 1150
 #define SCREEN_H 650
 #define LEVEL1_GROUND_Y 300
+// Top of the drawn ground strip in world space. Distinct from
+// LEVEL1_GROUND_Y, which is the player sprite's resting pos_background.y.
+#define LEVEL1_GROUND_STRIP_Y 515
 #define VICTORY_AUTO_RETURN_MS 4000
+// Parallax rates. The backdrop layers are generated at exactly the width
+// these rates require; scripts/verify_assets.py enforces that relationship.
+#define PARALLAX_FAR_NUM 1
+#define PARALLAX_FAR_DEN 2
+#define PARALLAX_NEAR_NUM 3
+#define PARALLAX_NEAR_DEN 4
+#define GROUND_TILE_W 64
 static SDL_Rect level1_obstacles[3];
 static SDL_Rect level1_goal;
 static Uint32 level1_start_ticks = 0;
@@ -157,48 +172,96 @@ static void update_camera(void) {
   camera.w = SCREEN_W;
   camera.h = SCREEN_H;
 }
+// Blit one parallax layer, scrolled at rate num/den of the camera and clamped
+// so the source rect can never run past the image. The layers are generated at
+// exactly the size these rates need, so the clamps are a backstop, not the
+// mechanism -- if one ever engages, the art is the wrong size and
+// scripts/verify_assets.py should have failed the build.
+static void draw_parallax_layer(SDL_Surface *target, const image *layer,
+                                int num, int den) {
+  SDL_Rect src, dst;
+  if (layer->img == NULL) {
+    return;
+  }
+  src.x = camera.x * num / den;
+  src.y = 0;
+  src.w = SCREEN_W;
+  src.h = SCREEN_H;
+  if (src.x > layer->img->w - SCREEN_W) {
+    src.x = layer->img->w - SCREEN_W;
+  }
+  if (src.x < 0) {
+    src.x = 0;
+  }
+  dst.x = 0;
+  dst.y = 0;
+  dst.w = SCREEN_W;
+  dst.h = SCREEN_H;
+  SDL_BlitSurface(layer->img, &src, target, &dst);
+}
+
+// Blit a world-space sprite, translated into screen space. Gameplay code works
+// in world coordinates; only the draw helpers know about the camera.
+static void draw_world_sprite(SDL_Surface *target, const image *sprite, int x,
+                              int y) {
+  SDL_Rect dst;
+  if (sprite->img == NULL) {
+    return;
+  }
+  dst.x = x - camera.x;
+  dst.y = y;
+  dst.w = sprite->img->w;
+  dst.h = sprite->img->h;
+  SDL_BlitSurface(sprite->img, NULL, target, &dst);
+}
+
 static void draw_level1_scene(SDL_Surface *target) {
-  SDL_Rect src_bg, dst_bg;
   SDL_Rect ground;
-  SDL_Rect goal_fill = level1_goal;
   SDL_Color white = {255, 255, 255, 0};
   SDL_Color yellow = {255, 255, 0, 0};
   int i;
+  int x;
   if (target == NULL) {
     return;
   }
-  src_bg.x = camera.x / 2;
-  src_bg.y = 0;
-  src_bg.w = SCREEN_W;
-  src_bg.h = SCREEN_H;
-  if (backgame.img != NULL && src_bg.x > backgame.img->w - SCREEN_W) {
-    src_bg.x = backgame.img->w - SCREEN_W;
+
+  draw_parallax_layer(target, &backgame, PARALLAX_FAR_NUM, PARALLAX_FAR_DEN);
+  draw_parallax_layer(target, &backgame_near, PARALLAX_NEAR_NUM,
+                      PARALLAX_NEAR_DEN);
+
+  if (ground_tile.img != NULL) {
+    // Tile from the first boundary left of the viewport so the strip scrolls
+    // with the camera instead of sliding under it.
+    for (x = -(camera.x % GROUND_TILE_W); x < SCREEN_W; x += GROUND_TILE_W) {
+      SDL_Rect dst;
+      dst.x = x;
+      dst.y = LEVEL1_GROUND_STRIP_Y;
+      dst.w = ground_tile.img->w;
+      dst.h = ground_tile.img->h;
+      SDL_BlitSurface(ground_tile.img, NULL, target, &dst);
+    }
+  } else {
+    ground.x = -camera.x;
+    ground.y = LEVEL1_GROUND_STRIP_Y;
+    ground.w = LEVEL1_W;
+    ground.h = SCREEN_H - ground.y;
+    SDL_FillRect(target, &ground, SDL_MapRGB(target->format, 79, 19, 37));
   }
-  if (src_bg.x < 0)
-    src_bg.x = 0;
-  dst_bg.x = 0;
-  dst_bg.y = 0;
-  dst_bg.w = SCREEN_W;
-  dst_bg.h = SCREEN_H;
-  SDL_BlitSurface(backgame.img, &src_bg, target, &dst_bg);
-  ground.x = -camera.x;
-  ground.y = 515;
-  ground.w = LEVEL1_W;
-  ground.h = SCREEN_H - ground.y;
-  SDL_FillRect(target, &ground, SDL_MapRGB(target->format, 52, 36, 18));
+
   for (i = 0; i < 3; ++i) {
-    SDL_Rect obs = level1_obstacles[i];
-    obs.x -= camera.x;
-    SDL_FillRect(target, &obs, SDL_MapRGB(target->format, 175, 105, 45));
+    const image *art = (i == 1) ? &obs_crate_tall : &obs_crate;
+    draw_world_sprite(target, art, level1_obstacles[i].x,
+                      level1_obstacles[i].y);
   }
-  goal_fill.x -= camera.x;
-  SDL_FillRect(target, &goal_fill, SDL_MapRGB(target->format, 190, 170, 40));
+  draw_world_sprite(target, &goal_beacon, level1_goal.x, level1_goal.y);
+
   draw_text(target, p.police_score,
             "Level 1: reach the exit beacon to finish the mission", 20, 10,
             yellow);
-  draw_text(target, p.police_score, "Player 1: arrows + space", 20, 34,
-            white);
-  draw_text(target, p.police_score, "Player 2: O/J/K/M", 20, 58, white);
+  draw_text(target, p.police_score, "Player 1: arrows move, space jump, A/D run",
+            20, 34, white);
+  draw_text(target, p.police_score, "Player 2: K/M move, J jump, O up, L down",
+            20, 58, white);
 }
 static void draw_victory_scene(SDL_Surface *target) {
   SDL_Rect panel;
@@ -252,6 +315,11 @@ bool init_engine(void) {
   memset(&p, 0, sizeof(perso));
   memset(&p1, 0, sizeof(perso));
   memset(&backgame, 0, sizeof(image));
+  memset(&backgame_near, 0, sizeof(image));
+  memset(&obs_crate, 0, sizeof(image));
+  memset(&obs_crate_tall, 0, sizeof(image));
+  memset(&goal_beacon, 0, sizeof(image));
+  memset(&ground_tile, 0, sizeof(image));
   memset(&m, 0, sizeof(minimap));
   memset(&t, 0, sizeof(temps));
   if (SDL_Init(SDL_INIT_EVERYTHING) != 0) {
@@ -274,12 +342,20 @@ bool init_engine(void) {
   return true;
 }
 void load_game_resources(void) {
-  // Load the real Level 1 map art so the mission scene is visible.
-  init_background(&backgame, "assets/img/Niv1.png");
+  // Level 1 scene art. The backdrop layers are built by
+  // scripts/gen_placeholder_assets.py from Niv1.png, extended to the full
+  // screen height: Niv1.png is 2048x341, so blitting a SCREEN_H-tall source
+  // rect straight out of it left the bottom 309 rows unwritten.
+  init_background(&backgame, "assets/img/levels/niv1_far.png");
   backgame.pos.x = 0;
   backgame.pos.y = 0;
   backgame.pos.w = SCREEN_W;
   backgame.pos.h = SCREEN_H;
+  init_background(&backgame_near, "assets/img/levels/niv1_near.png");
+  obs_crate.img = load_image_safe("assets/img/level1/crate.png");
+  obs_crate_tall.img = load_image_safe("assets/img/level1/crate_tall.png");
+  goal_beacon.img = load_image_safe("assets/img/level1/goal_beacon.png");
+  ground_tile.img = load_image_safe("assets/img/level1/ground_tile.png");
   son = load_wav_safe("assets/audio/mouseclick.wav");
   if (son != NULL) {
     Mix_VolumeChunk(son, MIX_MAX_VOLUME / 3);
@@ -718,8 +794,25 @@ void cleanup_game(void) {
     }
     free(p1.barre);
   }
+  // Level 1 scene art. Freed here alongside backgame because every resource
+  // for every state is loaded up front and released in one place.
   if (backgame.img != NULL) {
     SDL_FreeSurface(backgame.img);
+  }
+  if (backgame_near.img != NULL) {
+    SDL_FreeSurface(backgame_near.img);
+  }
+  if (obs_crate.img != NULL) {
+    SDL_FreeSurface(obs_crate.img);
+  }
+  if (obs_crate_tall.img != NULL) {
+    SDL_FreeSurface(obs_crate_tall.img);
+  }
+  if (goal_beacon.img != NULL) {
+    SDL_FreeSurface(goal_beacon.img);
+  }
+  if (ground_tile.img != NULL) {
+    SDL_FreeSurface(ground_tile.img);
   }
   if (p.score != NULL) {
     SDL_FreeSurface(p.score);

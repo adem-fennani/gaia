@@ -187,6 +187,44 @@ def check_manifest(sizes):
                 f"manifest declares {want_w}x{want_h}")
 
 
+# Mirrors src/main_menu.c and include/perso.h. The backdrop geometry check
+# below is what makes issue #14 un-regressable: a layer too small to cover the
+# source rect the camera asks for is a build failure, not a rendering artifact.
+SCREEN_W, SCREEN_H = 1150, 650
+LEVEL1_W = 2300
+PARALLAX_LAYERS = {
+    "assets/img/levels/niv1_far.png": 0.5,
+    "assets/img/levels/niv1_near.png": 0.75,
+}
+
+
+def check_backdrop_geometry(sizes):
+    """A parallax layer must cover the widest source rect the camera requests.
+
+    draw_level1_scene() blits a SCREEN_W x SCREEN_H rect at x = camera.x * rate.
+    camera.x runs to LEVEL1_W - SCREEN_W, so the layer needs
+    (LEVEL1_W - SCREEN_W) * rate + SCREEN_W pixels of width and SCREEN_H of
+    height. Niv1.png satisfied neither -- it is 2048x341, so the bottom 309
+    rows of every frame went unwritten.
+    """
+    for rel, rate in sorted(PARALLAX_LAYERS.items()):
+        if rel not in sizes:
+            if os.path.exists(os.path.join(ROOT, rel)):
+                continue          # present but not a PNG; nothing to measure
+            warnings.append(f"{rel} is absent; skipping geometry check")
+            continue
+        got_w, got_h = sizes[rel]
+        need_w = int((LEVEL1_W - SCREEN_W) * rate) + SCREEN_W
+        if got_w < need_w:
+            errors.append(
+                f"{rel}: {got_w}px wide, but parallax rate {rate} needs "
+                f"{need_w}px (camera.x reaches {LEVEL1_W - SCREEN_W})")
+        if got_h < SCREEN_H:
+            errors.append(
+                f"{rel}: {got_h}px tall, but the screen is {SCREEN_H}px "
+                f"(this is the issue #14 failure mode)")
+
+
 def main():
     found = collect_literals()
     if not found:
@@ -194,6 +232,7 @@ def main():
     check_paths(found)
     sizes = check_pngs()
     check_manifest(sizes)
+    check_backdrop_geometry(sizes)
 
     for warning in warnings:
         print(f"warning: {warning}")
