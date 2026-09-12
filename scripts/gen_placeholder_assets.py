@@ -267,6 +267,90 @@ def make_enemy_frames():
     return made
 
 
+# HUD geometry. Mirrors include/hud.h; verify_assets.py enforces the sizes.
+HUD_BAR_W, HUD_BAR_H = 228, 52
+HUD_MAP_W, HUD_MAP_H = 260, 44
+HUD_MARKER = 11
+
+
+def make_hud_bars():
+    """Half-size health bars, downscaled from the existing barre art.
+
+    The originals are 455x104. Two of them plus a minimap do not fit across a
+    1150px screen, which is why the HUD text was being drawn on top of them.
+    Downscaling keeps the original artwork rather than inventing new bars.
+    """
+    made = []
+    for src_dir, out_dir in (("barre", "barre"), ("barre1", "barre1")):
+        for i in range(6):
+            src = os.path.join(ASSETS, src_dir, f"barre_{i}.png")
+            if not os.path.exists(src):
+                sys.exit(f"{src} is required to build the HUD bars")
+            img = Image.open(src).convert("RGBA").resize(
+                (HUD_BAR_W, HUD_BAR_H), Image.LANCZOS)
+            name = f"barre_{i}.png"
+            stamp(img, name)
+            path = os.path.join(ASSETS, "hud", out_dir, name)
+            ensure_dir(os.path.dirname(path))
+            img.save(path)
+            made.append((path, img.size))
+    return made
+
+
+def make_minimap(name):
+    """A minimap rendered from level 1's actual geometry.
+
+    The shipped assets/img/minimap.png is 780x130 -- 206px wider than the
+    screen it was being drawn on -- and SDL 1.2 has no scaling blit, so it
+    cannot be shrunk at draw time. It is also cave-themed while the level is
+    volcanic. This draws the real obstacle and goal positions instead.
+    """
+    pad = 6
+    img = Image.new("RGBA", (HUD_MAP_W, HUD_MAP_H), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(img)
+    draw.rounded_rectangle([0, 0, HUD_MAP_W - 1, HUD_MAP_H - 1], radius=6,
+                           fill=PALETTE["ground_dark"] + (195,),
+                           outline=PALETTE["ground_light"] + (230,), width=2)
+
+    span = HUD_MAP_W - 2 * pad
+    def wx(world_x):
+        return pad + int(world_x * span / LEVEL1_W)
+
+    # Terrain sits in the bottom strip; the rest is the marker lane, so player
+    # markers never sit on top of the obstacle pips.
+    ground_y = HUD_MAP_H - 8
+    draw.line([(pad, ground_y), (HUD_MAP_W - pad, ground_y)],
+              fill=PALETTE["ground_light"], width=2)
+    for x, w in ((350, 80), (850, 90), (1350, 80)):
+        draw.rectangle([wx(x), ground_y - 4, wx(x + w), ground_y - 1],
+                       fill=PALETTE["crate"])
+    gx = wx(1900)
+    draw.polygon([(gx, ground_y - 1), (gx + 6, ground_y - 1),
+                  (gx + 3, ground_y - 9)], fill=PALETTE["goal_bright"])
+    stamp(img, name)
+    path = os.path.join(ASSETS, "hud", name)
+    ensure_dir(os.path.dirname(path))
+    img.save(path)
+    return path, img.size
+
+
+def make_marker(name, fill):
+    """Player position marker: points down, so its tip marks the position.
+
+    One per player and visibly different, because a single marker art for both
+    made two players on the minimap indistinguishable.
+    """
+    n = HUD_MARKER
+    img = Image.new("RGBA", (n, n), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(img)
+    draw.polygon([(n // 2, n - 1), (0, 0), (n - 1, 0)], fill=fill,
+                 outline=PALETTE["ground_dark"])
+    path = os.path.join(ASSETS, "hud", name)
+    ensure_dir(os.path.dirname(path))
+    img.save(path)
+    return path, img.size
+
+
 ROLES = {
     "levels/niv1_far.png": "level1 backdrop, far parallax layer (camera.x * 0.5)",
     "levels/niv1_near.png": "level1 backdrop, near parallax layer (camera.x * 0.75)",
@@ -274,6 +358,9 @@ ROLES = {
     "level1/crate_tall.png": "obstacle, matches level1_obstacles[1]",
     "level1/goal_beacon.png": "mission exit, matches level1_goal",
     "level1/ground_tile.png": "tileable ground strip for y=515..650",
+    "hud/minimap.png": "level 1 minimap, drawn from the real level geometry",
+    "hud/marker_p1.png": "player 1 position marker on the minimap",
+    "hud/marker_p2.png": "player 2 position marker on the minimap",
 }
 
 
@@ -295,7 +382,11 @@ def main():
     made.append(make_crate("crate_tall.png", (90, 130)))
     made.append(make_goal("goal_beacon.png", (125, 180)))
     made.append(make_ground_tile("ground_tile.png", (64, 135)))
+    made.append(make_minimap("minimap.png"))
+    made.append(make_marker("marker_p1.png", (247, 232, 120)))
+    made.append(make_marker("marker_p2.png", (120, 206, 247)))
     enemies = make_enemy_frames()
+    enemies += make_hud_bars()
 
     # Rewrite the manifest so declared dimensions can never drift from reality.
     lines = [
@@ -309,7 +400,9 @@ def main():
         lines.append(f"{rel}\t{size[0]}\t{size[1]}\t{ROLES.get(key, 'level1 art')}")
     for path, size in enemies:
         rel = os.path.relpath(path, ROOT)
-        lines.append(f"{rel}\t{size[0]}\t{size[1]}\tpatrolling enemy walk frame")
+        role = ("HUD health bar frame, downscaled from assets/img/barre*"
+                if "/hud/" in rel else "patrolling enemy walk frame")
+        lines.append(f"{rel}\t{size[0]}\t{size[1]}\t{role}")
 
     manifest = os.path.join(ROOT, "assets", "MANIFEST.tsv")
     with open(manifest, "w", encoding="utf-8") as fh:

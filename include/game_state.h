@@ -73,7 +73,14 @@ typedef struct {
   image goal_beacon;
   image ground_tile;
 
+  image marker_p1; /* minimap position markers, one per player */
+  image marker_p2;
+
   plat_sound *click;
+
+  /* HUD text. The 40pt perso.police_score is kept for the victory screen,
+   * where there is room for it; at 40pt the HUD lines overlapped each other. */
+  plat_font *hud_font;
 } game_assets;
 
 typedef struct {
@@ -86,7 +93,6 @@ typedef struct {
 
   perso p, p1;
   minimap map;
-  temps clock;
   plat_rect camera;
 
   /* Level 1 geometry, in world space. */

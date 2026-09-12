@@ -6,6 +6,7 @@
  */
 
 #include "../include/game_state.h"
+#include "../include/hud.h"
 
 /* The collision box, offset inside the sprite. These numbers do not match the
  * art -- frames run 99-205px wide and 286-304px tall, so the box drifts as the
@@ -141,8 +142,6 @@ static void draw_world_sprite(game_ctx *ctx, const image *sprite, int x,
 }
 
 static void draw_scene(game_ctx *ctx) {
-  plat_color white = {255, 255, 255, 0};
-  plat_color yellow = {255, 255, 0, 0};
   int i;
   int x;
 
@@ -178,13 +177,6 @@ static void draw_scene(game_ctx *ctx) {
   }
   draw_world_sprite(ctx, &ctx->art.goal_beacon, ctx->goal.x, ctx->goal.y);
 
-  plat_text_draw(ctx->screen, ctx->p.police_score,
-                 "Level 1: reach the exit beacon to finish the mission", 20, 10,
-                 yellow);
-  plat_text_draw(ctx->screen, ctx->p.police_score,
-                 "Player 1: arrows move, space jump, A/D run", 20, 34, white);
-  plat_text_draw(ctx->screen, ctx->p.police_score,
-                 "Player 2: K/M move, J jump, O up, L down", 20, 58, white);
 }
 
 /* Runs on every entry, including a return after ESC. The old code reset only
@@ -365,9 +357,9 @@ static void level1_update(game_ctx *ctx) {
 
 static void level1_draw(game_ctx *ctx) {
   draw_scene(ctx);
-  afficherPerso(ctx->p, ctx->screen, ctx->camera.x);
-  afficherPerso(ctx->p1, ctx->screen, ctx->camera.x);
-  afficherminimap(ctx->map, ctx->screen);
+  afficherPerso(&ctx->p, ctx->screen, ctx->camera.x);
+  afficherPerso(&ctx->p1, ctx->screen, ctx->camera.x);
+  hud_draw(ctx);
 
   /* Score counts rendered frames, so it reads as a frame-rate gauge. Slice 5
    * bases it on elapsed time and distance instead. */

@@ -7,6 +7,9 @@ assets/img/level1/crate.png	80	128	obstacle, matches level1_obstacles[0] and [2]
 assets/img/level1/crate_tall.png	90	130	obstacle, matches level1_obstacles[1]
 assets/img/level1/goal_beacon.png	125	180	mission exit, matches level1_goal
 assets/img/level1/ground_tile.png	64	135	tileable ground strip for y=515..650
+assets/img/hud/minimap.png	260	44	level 1 minimap, drawn from the real level geometry
+assets/img/hud/marker_p1.png	11	11	player 1 position marker on the minimap
+assets/img/hud/marker_p2.png	11	11	player 2 position marker on the minimap
 assets/img/enemy/walk0-0.png	96	96	patrolling enemy walk frame
 assets/img/enemy/walk0-1.png	96	96	patrolling enemy walk frame
 assets/img/enemy/walk0-2.png	96	96	patrolling enemy walk frame
@@ -19,3 +22,15 @@ assets/img/enemy/walk1-2.png	96	96	patrolling enemy walk frame
 assets/img/enemy/walk1-3.png	96	96	patrolling enemy walk frame
 assets/img/enemy/walk1-4.png	96	96	patrolling enemy walk frame
 assets/img/enemy/walk1-5.png	96	96	patrolling enemy walk frame
+assets/img/hud/barre/barre_0.png	228	52	HUD health bar frame, downscaled from assets/img/barre*
+assets/img/hud/barre/barre_1.png	228	52	HUD health bar frame, downscaled from assets/img/barre*
+assets/img/hud/barre/barre_2.png	228	52	HUD health bar frame, downscaled from assets/img/barre*
+assets/img/hud/barre/barre_3.png	228	52	HUD health bar frame, downscaled from assets/img/barre*
+assets/img/hud/barre/barre_4.png	228	52	HUD health bar frame, downscaled from assets/img/barre*
+assets/img/hud/barre/barre_5.png	228	52	HUD health bar frame, downscaled from assets/img/barre*
+assets/img/hud/barre1/barre_0.png	228	52	HUD health bar frame, downscaled from assets/img/barre*
+assets/img/hud/barre1/barre_1.png	228	52	HUD health bar frame, downscaled from assets/img/barre*
+assets/img/hud/barre1/barre_2.png	228	52	HUD health bar frame, downscaled from assets/img/barre*
+assets/img/hud/barre1/barre_3.png	228	52	HUD health bar frame, downscaled from assets/img/barre*
+assets/img/hud/barre1/barre_4.png	228	52	HUD health bar frame, downscaled from assets/img/barre*
+assets/img/hud/barre1/barre_5.png	228	52	HUD health bar frame, downscaled from assets/img/barre*

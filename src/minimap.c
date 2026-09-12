@@ -22,12 +22,20 @@
  * @return Nothing
  */
 void initmap(minimap *m) {
-  m->img = plat_image_load("assets/img/minimap.png");
-  m->pos.x = 576;
-  m->pos.y = 20;
-  m->perso_img = plat_image_load("assets/img/fleche.png");
-  m->perso_pos.x = 576;
-  m->perso_pos.y = 94;
+  /* The 260x44 minimap and its marker are generated from level 1's real
+   * geometry by scripts/gen_placeholder_assets.py. The previous art was
+   * assets/img/minimap.png at 780x130 -- 206px wider than the screen it was
+   * drawn on, and cave-themed while the level is volcanic.
+   *
+   * Positions are not set here: src/hud.c owns HUD layout and places both the
+   * panel and the per-player markers every frame. */
+  m->img = plat_image_load("assets/img/hud/minimap.png");
+  /* perso_img/perso_pos stay unset: the two player markers live on
+   * game_assets, since this struct has only one slot and there are two
+   * players. Both fields go away with the rest of the dead minimap code. */
+  m->perso_img = NULL;
+  memset(&m->pos, 0, sizeof(m->pos));
+  memset(&m->perso_pos, 0, sizeof(m->perso_pos));
 }
 
 /**

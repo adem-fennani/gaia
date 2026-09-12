@@ -8,6 +8,7 @@
  */
 
 #include "../include/game_state.h"
+#include "../include/hud.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -69,6 +70,8 @@ void load_game_resources(void) {
       plat_image_load("assets/img/level1/crate_tall.png");
   art->goal_beacon.img = plat_image_load("assets/img/level1/goal_beacon.png");
   art->ground_tile.img = plat_image_load("assets/img/level1/ground_tile.png");
+  art->marker_p1.img = plat_image_load("assets/img/hud/marker_p1.png");
+  art->marker_p2.img = plat_image_load("assets/img/hud/marker_p2.png");
 
   art->click = plat_sound_load("assets/audio/mouseclick.wav");
   if (art->click != NULL) {
@@ -82,6 +85,8 @@ void load_game_resources(void) {
   init_bouton(&art->B_play1, "assets/img/B_play1.png", &art->B_settings1,
               "assets/img/B_settings1.png", &art->B_quit1,
               "assets/img/B_quit1.png");
+  art->hud_font = plat_font_open("assets/fonts/Raimen.ttf", HUD_FONT_PT);
+
   init_background(&art->settings, "assets/img/settings.png");
   init_retour_bouton(&art->exits, "assets/img/exits.png");
   init_retour_bouton(&art->exits1, "assets/img/exits1.png");
@@ -100,7 +105,6 @@ void load_game_resources(void) {
   initPerso(&g_game.p);
   initPerso1(&g_game.p1);
   initmap(&g_game.map);
-  init_temps(&g_game.clock);
 
   /* Level 1 geometry, hardcoded here. A real level format is out of scope. */
   g_game.obstacles[0].x = 350;
@@ -211,9 +215,12 @@ void cleanup_game(void) {
   librer(art->obs_crate_tall);
   librer(art->goal_beacon);
   librer(art->ground_tile);
+  librer(art->marker_p1);
+  librer(art->marker_p2);
 
   plat_sound_free(art->click);
 
+  plat_font_close(art->hud_font);
   plat_font_close(g_game.p.police_score);
   plat_font_close(g_game.p1.police_score);
 
