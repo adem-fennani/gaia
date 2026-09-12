@@ -36,14 +36,14 @@ void initmap(minimap *m) {
  * @return Nothing
  */
 void init_background_minimap(backg *bg) {
-  bg->img = load_image_safe("assets/img/ressources/background_2.png");
+  bg->img = load_image_safe("assets/img/Ressources/background_2.png");
   if (bg->img == NULL) {
     printf("Error opening: %s\n", SDL_GetError());
     return;
   }
   bg->pos.x = 0;
   bg->pos.y = 0;
-  bg->masque = load_image_safe("assets/img/ressources/masque.png");
+  bg->masque = load_image_safe("assets/img/Ressources/masque.png");
   if (bg->masque == NULL) {
     printf("Error opening: %s\n", SDL_GetError());
     return;
@@ -61,7 +61,7 @@ void init_background_minimap(backg *bg) {
 /*
 void init_perso(perso* perso)
 {
-        perso->img = load_image_safe("assets/img/ressources/perso.png");
+        perso->img = load_image_safe("assets/img/Ressources/perso.png");
         if (perso->img == NULL)
         {
                 printf("Error opening: %s\n", SDL_GetError());
@@ -182,7 +182,7 @@ int init_text_temps(text *t) {
   strcpy(t->txt, "");
   t->pos.x = 20;
   t->pos.y = 20;
-  testload = charger_font(t, "assets/img/ressources/LemonMilk.otf");
+  testload = charger_font(t, "assets/img/Ressources/LemonMilk.otf");
   t->surf = NULL;
   return testload;
 }
@@ -265,10 +265,10 @@ void quitgame(int *q, tic c) {
 }
 
 void init(tic *c) {
-  c->table = load_image_safe("assets/img/ressources/xo.png");
-  c->t[0] = load_image_safe("assets/img/ressources/X.png");
-  c->t[1] = load_image_safe("assets/img/ressources/O.png");
-  c->bg = load_image_safe("assets/img/ressources/white.jpeg");
+  c->table = load_image_safe("assets/img/Ressources/xo.png");
+  c->t[0] = load_image_safe("assets/img/Ressources/X.png");
+  c->t[1] = load_image_safe("assets/img/Ressources/O.png");
+  c->bg = load_image_safe("assets/img/Ressources/white.jpeg");
   if (c->t[1] == NULL)
     printf("Affichage réussi\n");
   for (int i = 0; i < 3; i++)
