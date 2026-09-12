@@ -86,8 +86,6 @@ typedef struct {
   /* [direction][frame], mirroring the perso image[][] layout. */
   plat_surface *enemy_frames[2][ENEMY_FRAMES];
 
-  plat_sound *click;
-
   /* HUD text. The 40pt perso.police_score is kept for the victory screen,
    * where there is room for it; at 40pt the HUD lines overlapped each other. */
   plat_font *hud_font;
@@ -153,6 +151,10 @@ extern const game_state_handlers victory_state;
 /* Request a transition. Takes effect after the current frame finishes, so a
  * handler can ask to leave without its remaining work being skipped. */
 void game_request(game_ctx *ctx, game_state next);
+
+/* Places the settings slider knob to match ctx->volume. Called once at load
+ * so the knob starts consistent with the default volume. */
+void settings_sync_slider(game_ctx *ctx);
 
 /* True when the point is inside the image's drawn area. The menu and settings
  * screens both hit-test buttons this way. */

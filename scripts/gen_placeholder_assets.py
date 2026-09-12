@@ -21,9 +21,12 @@ Deterministic: same input, same bytes out. Re-runnable. Requires Pillow.
 """
 
 import argparse
+import math
 import os
 import random
+import struct
 import sys
+import wave
 
 try:
     from PIL import Image, ImageDraw
@@ -351,6 +354,78 @@ def make_marker(name, fill):
     return path, img.size
 
 
+AUDIO = os.path.join(ROOT, "assets", "audio")
+
+# 22050Hz mono 16-bit PCM. SDL_mixer resamples to its own output rate, so the
+# only thing that matters here is that these are plain PCM WAVs.
+SFX_RATE = 22050
+
+
+def write_wav(name, samples):
+    """Write mono 16-bit PCM. Uses the stdlib, so no new build dependency."""
+    ensure_dir(AUDIO)
+    path = os.path.join(AUDIO, name)
+    with wave.open(path, "wb") as fh:
+        fh.setnchannels(1)
+        fh.setsampwidth(2)
+        fh.setframerate(SFX_RATE)
+        frames = b"".join(
+            struct.pack("<h", max(-32767, min(32767, int(v * 32767))))
+            for v in samples)
+        fh.writeframes(frames)
+    return path, (len(samples), 1)
+
+
+def tone(freq_from, freq_to, seconds, shape="sine", decay=4.0, gain=0.55):
+    """A pitch sweep with exponential decay, as a sample generator."""
+    n = int(SFX_RATE * seconds)
+    phase = 0.0
+    for i in range(n):
+        t = i / n
+        freq = freq_from + (freq_to - freq_from) * t
+        phase += 2.0 * math.pi * freq / SFX_RATE
+        if shape == "square":
+            v = 1.0 if math.sin(phase) >= 0 else -1.0
+        else:
+            v = math.sin(phase)
+        yield v * gain * math.exp(-decay * t)
+
+
+def mix(*streams):
+    """Sum streams of different lengths, padding the short ones."""
+    lists = [list(s) for s in streams]
+    out = []
+    for i in range(max(len(x) for x in lists)):
+        out.append(sum(x[i] for x in lists if i < len(x)))
+    return out
+
+
+def make_sfx():
+    """Generate the sound effects the project never had.
+
+    assets/audio/ shipped exactly one file, mouseclick.wav, so there was no
+    audio for jumping, taking damage, reaching the goal, or moving the menu
+    selection. These are deliberately plain synthesised blips, matching the
+    placeholder-art approach: replaceable, and obviously not final.
+    """
+    made = []
+    made.append(write_wav("menu_move.wav",
+                          list(tone(760, 880, 0.06, decay=9.0, gain=0.32))))
+    made.append(write_wav("jump.wav",
+                          list(tone(320, 720, 0.15, decay=5.0))))
+    made.append(write_wav("damage.wav",
+                          mix(tone(420, 110, 0.24, "square", 5.0, 0.34),
+                              tone(210, 70, 0.24, "sine", 4.0, 0.32))))
+    # A rising triad for the goal, each note offset in time.
+    goal = []
+    for k, freq in enumerate((523.25, 659.25, 783.99)):
+        note = list(tone(freq, freq, 0.30, decay=5.5, gain=0.40))
+        pad = [0.0] * int(SFX_RATE * 0.09 * k)
+        goal.append(pad + note)
+    made.append(write_wav("goal.wav", mix(*goal)))
+    return made
+
+
 ROLES = {
     "levels/niv1_far.png": "level1 backdrop, far parallax layer (camera.x * 0.5)",
     "levels/niv1_near.png": "level1 backdrop, near parallax layer (camera.x * 0.75)",
@@ -387,6 +462,7 @@ def main():
     made.append(make_marker("marker_p2.png", (120, 206, 247)))
     enemies = make_enemy_frames()
     enemies += make_hud_bars()
+    sfx = make_sfx()
 
     # Rewrite the manifest so declared dimensions can never drift from reality.
     lines = [
@@ -410,7 +486,9 @@ def main():
 
     for path, size in made + enemies:
         print(f"  {size[0]:>5} x {size[1]:<5}  {os.path.relpath(path, ROOT)}")
-    print(f"\nWrote {len(made) + len(enemies)} files and "
+    for path, (frames, _ch) in sfx:
+        print(f"  {frames / SFX_RATE:>8.2f}s      {os.path.relpath(path, ROOT)}")
+    print(f"\nWrote {len(made) + len(enemies) + len(sfx)} files and "
           f"{os.path.relpath(manifest, ROOT)}")
     return 0
 

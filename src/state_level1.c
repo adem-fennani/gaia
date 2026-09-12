@@ -6,6 +6,7 @@
  */
 
 #include "../include/game_state.h"
+#include "../include/audio.h"
 #include "../include/collision.h"
 #include "../include/enemy.h"
 #include "../include/hud.h"
@@ -188,10 +189,14 @@ static void level1_event(game_ctx *ctx, const SDL_Event *event) {
      * it used to set up=1 directly, which started a fall from midair without
      * ever giving upward velocity. */
     case SDLK_UP:
-      perso_jump(&ctx->p);
+      if (perso_jump(&ctx->p)) {
+        audio_play(AUDIO_JUMP);
+      }
       break;
     case SDLK_SPACE:
-      perso_jump(&ctx->p);
+      if (perso_jump(&ctx->p)) {
+        audio_play(AUDIO_JUMP);
+      }
       break;
     case SDLK_LEFT:
       ctx->p.direction = 1;
@@ -210,10 +215,10 @@ static void level1_event(game_ctx *ctx, const SDL_Event *event) {
     /* Player 2: K/M to move, J or O to jump, W/X to run. acc1 previously had
      * no key at all -- it was only ever cleared -- so player 2 could not run. */
     case SDLK_o:
-      perso_jump(&ctx->p1);
-      break;
     case SDLK_j:
-      perso_jump(&ctx->p1);
+      if (perso_jump(&ctx->p1)) {
+        audio_play(AUDIO_JUMP);
+      }
       break;
     case SDLK_w:
       ctx->acc1 = 1;
@@ -373,8 +378,10 @@ static void level1_update(game_ctx *ctx) {
     }
     /* Contact is resolved after both sides have moved, so a hit cannot depend
      * on which of them stepped first. */
-    enemy_collide_player(ctx->enemies, &ctx->p);
-    enemy_collide_player(ctx->enemies, &ctx->p1);
+    if (enemy_collide_player(ctx->enemies, &ctx->p) |
+        enemy_collide_player(ctx->enemies, &ctx->p1)) {
+      audio_play(AUDIO_DAMAGE);
+    }
     perso_sync_rect(&ctx->p);
     perso_sync_rect(&ctx->p1);
   }
@@ -396,6 +403,7 @@ static void level1_update(game_ctx *ctx) {
   }
 
   if (level1_completed(ctx)) {
+    audio_play(AUDIO_GOAL);
     capture_victory_stats(ctx);
     game_request(ctx, ST_VICTORY);
   }

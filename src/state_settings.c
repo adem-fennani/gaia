@@ -1,24 +1,35 @@
 /* Settings screen: music volume and a way back to the menu. */
 
+#include "../include/audio.h"
 #include "../include/game_state.h"
 
 /* Travel limits for the slider knob, in screen coordinates. */
 #define SLIDER_MIN_X 515
 #define SLIDER_MAX_X 720
-#define SLIDER_STEP 15
+
+/* The knob's position is derived from the volume rather than nudged alongside
+ * it. Previously the two moved independently -- the knob by a flat +-15px per
+ * press, the volume by +-9 or +-10 -- so they desynced immediately, and the
+ * knob started pinned at the far left while the volume sat at its 64 default,
+ * i.e. showing empty at half volume. Deriving it makes that impossible. */
+void settings_sync_slider(game_ctx *ctx) {
+  int span = SLIDER_MAX_X - SLIDER_MIN_X;
+  int v = ctx->volume;
+  if (v < 0) {
+    v = 0;
+  }
+  if (v > AUDIO_VOLUME_MAX) {
+    v = AUDIO_VOLUME_MAX;
+  }
+  ctx->art.slayed.pos.x = (Sint16)(SLIDER_MIN_X + v * span / AUDIO_VOLUME_MAX);
+}
 
 static void slider_nudge(game_ctx *ctx, int volume_delta) {
-  ctx->volume += volume_delta;
-  /* plat_music_volume clamps to the mixer's range; ctx->volume itself is
-   * still unbounded, which Slice 7 fixes along with the rest of the audio. */
-  plat_music_volume(ctx->volume);
-  ctx->art.slayed.pos.x += (volume_delta > 0) ? SLIDER_STEP : -SLIDER_STEP;
-  if (ctx->art.slayed.pos.x <= SLIDER_MIN_X) {
-    ctx->art.slayed.pos.x = SLIDER_MIN_X;
-  }
-  if (ctx->art.slayed.pos.x >= SLIDER_MAX_X) {
-    ctx->art.slayed.pos.x = SLIDER_MAX_X;
-  }
+  /* audio_music_volume clamps and returns what it applied, so ctx->volume
+   * cannot drift outside the mixer's range. The old code added +-9 or +-10
+   * without any bound at all. */
+  ctx->volume = audio_music_volume(ctx->volume + volume_delta);
+  settings_sync_slider(ctx);
 }
 
 static int rect_contains(const plat_rect *rect, int x, int y) {
@@ -53,7 +64,7 @@ static void settings_event(game_ctx *ctx, const SDL_Event *event) {
       slider_nudge(ctx, -10);
     } else if (image_contains(&ctx->art.exits, event->button.x,
                               event->button.y)) {
-      plat_sound_play(ctx->art.click);
+      audio_play(AUDIO_MENU_CLICK);
       game_request(ctx, ST_MENU);
     }
     return;

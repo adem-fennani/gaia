@@ -31,6 +31,12 @@ bool plat_init(int width, int height, const char *caption) {
 
   IMG_Init(IMG_INIT_PNG);
 
+  /* Mix_Init loads the decoder libraries. Without it, MP3 and OGG support
+   * depends on the mixer lazily loading them, which is not guaranteed -- and
+   * the project's only music track is an MP3. Missing codecs are not fatal:
+   * the requested flags that came back tell us what is actually available. */
+  Mix_Init(MIX_INIT_MP3 | MIX_INIT_OGG);
+
   /* Audio is optional: a machine with no working device should still play. */
   if (Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 4096) == -1) {
     fprintf(stderr, "[plat_init] Mix_OpenAudio failed, continuing muted: %s\n",
@@ -53,6 +59,9 @@ void plat_shutdown(void) {
     Mix_CloseAudio();
     g_audio_ok = false;
   }
+  /* Pairs with Mix_Init. Neither this nor Mix_CloseAudio existed anywhere in
+   * the tree before, which is the "missing cleanup" half of issue #17. */
+  Mix_Quit();
   TTF_Quit();
   IMG_Quit();
   /* g_screen belongs to SDL_SetVideoMode; SDL_Quit releases it. */

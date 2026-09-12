@@ -79,5 +79,7 @@ double perso_speed(const perso *p);
 void animerPerso(perso *p, double dt_seconds);
 /* Copies wx/wy into the integer pos_background used for drawing. */
 void perso_sync_rect(perso *p);
-void perso_jump(perso *p);
+/* Jumps only from the ground. Returns 1 if a jump actually started, so the
+ * caller can sound it without guessing. */
+int perso_jump(perso *p);
 #endif

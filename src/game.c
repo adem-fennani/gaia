@@ -7,6 +7,7 @@
  * load_game_resources() and cleanup_game().
  */
 
+#include "../include/audio.h"
 #include "../include/game_state.h"
 #include "../include/hud.h"
 #include <stdio.h>
@@ -82,11 +83,6 @@ void load_game_resources(void) {
     }
   }
 
-  art->click = plat_sound_load("assets/audio/mouseclick.wav");
-  if (art->click != NULL) {
-    plat_sound_volume(art->click, plat_music_max_volume() / 3);
-  }
-
   init_background(&art->background, "assets/img/background.jpg");
   init_bouton(&art->B_play, "assets/img/B_play.png", &art->B_settings,
               "assets/img/B_settings.png", &art->B_quit,
@@ -145,7 +141,13 @@ void load_game_resources(void) {
   g_game.next = ST_MENU;
   g_game.hover = 0;
   g_game.exit_hover = 0;
-  g_game.volume = 64;
+  /* Audio comes up after the assets, and the music starts immediately so the
+   * settings slider has something to act on. */
+  audio_init();
+  g_game.volume = audio_music_volume(AUDIO_VOLUME_DEFAULT);
+  settings_sync_slider(&g_game);
+  audio_music_start();
+
   g_game.t_prev = plat_ticks();
 }
 
@@ -248,8 +250,6 @@ void cleanup_game(void) {
     }
   }
 
-  plat_sound_free(art->click);
-
   plat_font_close(art->hud_font);
   plat_font_close(g_game.p.police_score);
   plat_font_close(g_game.p1.police_score);
@@ -279,6 +279,7 @@ void cleanup_game(void) {
   plat_image_free(g_game.p.score);
   plat_image_free(g_game.p1.score);
 
+  audio_shutdown();
   plat_shutdown();
 }
 

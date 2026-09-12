@@ -114,16 +114,17 @@ double perso_speed(const perso *p) {
   return (p->direction == 1) ? -speed : speed;
 }
 
-void perso_jump(perso *p) {
+int perso_jump(perso *p) {
   /* Only from the ground: the old code set up=1 on any press, so holding the
    * key climbed indefinitely. */
   if (!p->on_ground) {
-    return;
+    return 0;
   }
   p->vect_y = -PLAYER_JUMP_SPEED;
   p->on_ground = 0;
   p->up = 1;
   p->jump = 1;
+  return 1;
 }
 
 /* Draws the character only. The health bar and score moved to src/hud.c,
