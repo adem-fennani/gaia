@@ -14,8 +14,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-/* Named g_game rather than `game` because include/minimap.h still declares a
- * `void game(...)` -- the unreachable tic-tac-toe that Slice 8 deletes. */
 static game_ctx g_game;
 
 static const game_state_handlers *handlers_for(game_state state) {
@@ -72,6 +70,7 @@ void load_game_resources(void) {
       plat_image_load("assets/img/level1/crate_tall.png");
   art->goal_beacon.img = plat_image_load("assets/img/level1/goal_beacon.png");
   art->ground_tile.img = plat_image_load("assets/img/level1/ground_tile.png");
+  art->minimap.img = plat_image_load("assets/img/hud/minimap.png");
   art->marker_p1.img = plat_image_load("assets/img/hud/marker_p1.png");
   art->marker_p2.img = plat_image_load("assets/img/hud/marker_p2.png");
   for (i = 0; i < 2; ++i) {
@@ -109,7 +108,6 @@ void load_game_resources(void) {
 
   initPerso(&g_game.p);
   initPerso1(&g_game.p1);
-  initmap(&g_game.map);
 
   /* Level 1 geometry, hardcoded here. A real level format is out of scope.
    *
@@ -242,6 +240,7 @@ void cleanup_game(void) {
   librer(art->obs_crate_tall);
   librer(art->goal_beacon);
   librer(art->ground_tile);
+  librer(art->minimap);
   librer(art->marker_p1);
   librer(art->marker_p2);
   for (i = 0; i < 2; ++i) {
@@ -275,9 +274,6 @@ void cleanup_game(void) {
     }
     free(g_game.p1.barre);
   }
-
-  plat_image_free(g_game.p.score);
-  plat_image_free(g_game.p1.score);
 
   audio_shutdown();
   plat_shutdown();

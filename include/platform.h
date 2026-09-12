@@ -86,6 +86,9 @@ void plat_sound_volume(plat_sound *sound, int volume);
 void plat_sound_play(plat_sound *sound);
 
 plat_music *plat_music_load(const char *path);
+/* Same, but silent when the file is simply absent -- for probing an optional
+ * preferred format before falling back. */
+plat_music *plat_music_load_optional(const char *path);
 void plat_music_free(plat_music *music);
 void plat_music_play(plat_music *music, int loops);
 void plat_music_stop(void);

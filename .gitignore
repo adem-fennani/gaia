@@ -13,11 +13,6 @@ cmake-build-*/
 # Caches
 .cache/
 
-# Doxygen / Minimap files
-minimap/html/
-minimap/latex/
-minimap/.vscode
-
 # Local planning docs
 docs/
 

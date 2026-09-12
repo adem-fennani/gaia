@@ -46,7 +46,6 @@ typedef struct {
   TTF_Font *police_score;
   SDL_Surface *image[2][9];
   SDL_Surface **barre;
-  SDL_Surface *score;
   SDL_Rect pos_background, pos_barre, pos_score;
   int direction, imag, up, jump;
   int on_ground;
@@ -63,7 +62,6 @@ typedef struct {
    * wx could drop the player inside a solid. */
   double vx_impulse;
 
-  char scor[20];
   int iscore;
   int vie;
   double vect_x;

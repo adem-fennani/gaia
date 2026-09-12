@@ -251,8 +251,8 @@ void plat_text_draw(plat_surface *target, plat_font *font, const char *text,
   pos.x = (Sint16)x;
   pos.y = (Sint16)y;
   SDL_BlitSurface(surface, NULL, target, &pos);
-  /* Freed here every time: rendering text per frame without this is a leak,
-   * which is exactly what afficherPerso() still does with its score surface. */
+  /* Freed here every time. Rendering text per frame without freeing it is
+   * exactly the leak afficherPerso() used to have. */
   SDL_FreeSurface(surface);
 }
 
@@ -300,6 +300,13 @@ plat_music *plat_music_load(const char *path) {
             path != NULL ? path : "(null)", Mix_GetError());
   }
   return music;
+}
+
+plat_music *plat_music_load_optional(const char *path) {
+  if (!g_audio_ok) {
+    return NULL;
+  }
+  return Mix_LoadMUS(path);
 }
 
 void plat_music_free(plat_music *music) {

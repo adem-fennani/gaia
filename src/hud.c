@@ -53,12 +53,12 @@ static void draw_minimap(game_ctx *ctx) {
   plat_rect dst;
   int i;
 
-  if (ctx->map.img != NULL) {
+  if (ctx->art.minimap.img != NULL) {
     dst.x = HUD_MAP_X;
     dst.y = HUD_TOP;
     dst.w = HUD_MAP_W;
     dst.h = HUD_MAP_H;
-    plat_blit(ctx->map.img, NULL, ctx->screen, &dst);
+    plat_blit(ctx->art.minimap.img, NULL, ctx->screen, &dst);
   }
 
   /* One marker per player, positioned from world coordinates every frame.

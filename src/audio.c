@@ -32,7 +32,33 @@ void audio_init(void) {
       plat_sound_volume(g_sfx[i], SFX_VOLUME[i]);
     }
   }
-  g_music = plat_music_load("assets/audio/music.mp3");
+  /* OGG is preferred over MP3, and this is not a matter of taste.
+   *
+   * SDL_mixer 1.2's MP3 backend (music_mad, via libmad) reads past its own
+   * decode buffer. AddressSanitizer catches it as a heap-buffer-overflow on
+   * the mixer's audio thread: an 8464-byte read starting 1024 bytes past the
+   * end of the 72112-byte region that mad_openFileRW allocated during
+   * Mix_LoadMUS, inside mad_getSamples -> SDL_ConvertAudio. SDL_mixer 1.2.12
+   * is from 2012 and unmaintained, so this will not be fixed upstream.
+   *
+   * That is almost certainly the "audio anomalies on modern Linux" in #17:
+   * a decoder scribbling past its buffer produces exactly the noise and
+   * instability that was reported, and the v0.2.0 changelog's attempt to fix
+   * it by tuning Mix_OpenAudio parameters was treating a symptom.
+   *
+   * The OGG backend uses libvorbisfile, which is maintained and does not have
+   * this defect. Converting the track sidesteps the buggy decoder entirely:
+   *
+   *     ffmpeg -i assets/audio/music.mp3 -c:a libvorbis -q:a 4 \
+   *            assets/audio/music.ogg
+   *
+   * Drop that file in and this picks it up with no code change. Until then the
+   * MP3 is used, because silence is worse than a decoder bug in a background
+   * track -- but it is a known-bad path, not a supported one. */
+  g_music = plat_music_load_optional("assets/audio/music.ogg");
+  if (g_music == NULL) {
+    g_music = plat_music_load("assets/audio/music.mp3");
+  }
 }
 
 void audio_shutdown(void) {

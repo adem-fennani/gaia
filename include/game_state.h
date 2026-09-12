@@ -23,7 +23,6 @@
 
 #include "enemy.h"
 #include "menu.h"
-#include "minimap.h"
 #include "perso.h"
 #include "platform.h"
 
@@ -80,6 +79,7 @@ typedef struct {
   image goal_beacon;
   image ground_tile;
 
+  image minimap;   /* HUD minimap panel */
   image marker_p1; /* minimap position markers, one per player */
   image marker_p2;
 
@@ -101,7 +101,6 @@ typedef struct {
 
   perso p, p1;
   enemy enemies[ENEMY_COUNT];
-  minimap map;
   plat_rect camera;
 
   /* Level 1 geometry, in world space. */

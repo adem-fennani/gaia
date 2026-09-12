@@ -40,6 +40,16 @@ CONVERSION = re.compile(r"%[0-9.]*[dis]")
 errors = []
 warnings = []
 
+# Assets the game probes for but works without. Everything else must exist:
+# a missing required asset is a build failure, since load_image_safe() would
+# otherwise hide it behind a placeholder checkerboard at runtime.
+#
+# music.ogg is optional because SDL_mixer 1.2's MP3 decoder overruns its own
+# buffer (see the comment in src/audio.c). The game prefers an OGG track if one
+# is present and falls back to the MP3 otherwise, so shipping the OGG is a fix
+# you can drop in without touching code.
+OPTIONAL = {"assets/audio/music.ogg"}
+
 
 def strip_comments(text):
     """Remove /*...*/ and //... so commented-out loads are not treated as live."""
@@ -77,6 +87,11 @@ def check_paths(found):
                 errors.append(
                     f"{sites}: pattern '{literal}' matches no file on disk"
                 )
+            continue
+
+        if literal in OPTIONAL:
+            if not os.path.exists(os.path.join(ROOT, literal)):
+                warnings.append(f"{literal} is absent (optional)")
             continue
 
         full = os.path.join(ROOT, literal)
@@ -225,6 +240,51 @@ def check_backdrop_geometry(sizes):
                 f"(this is the issue #14 failure mode)")
 
 
+def manifest_paths():
+    """Paths the manifest declares, including the generator's inputs."""
+    declared = set()
+    if not os.path.exists(MANIFEST):
+        return declared
+    for line in open(MANIFEST, encoding="utf-8"):
+        if line.strip() and not line.lstrip().startswith("#"):
+            declared.add(line.split("\t")[0])
+    return declared
+
+
+def report_unreferenced(found):
+    """List assets nothing loads and the manifest does not claim.
+
+    Not an error: unused art is a housekeeping question, not a broken build.
+    But it should be visible, because deleting the wrong file here breaks the
+    generator rather than the game -- assets/img/Niv1.png and the barre art
+    are inputs to scripts/gen_placeholder_assets.py, loaded by nothing at
+    runtime, and the manifest records them so they read as intentional.
+    """
+    referenced = set()
+    for literal in found:
+        if CONVERSION.search(literal):
+            pattern = CONVERSION.sub("*", literal)
+            for hit in glob.glob(os.path.join(ROOT, pattern)):
+                referenced.add(os.path.relpath(hit, ROOT))
+        else:
+            referenced.add(literal)
+
+    declared = manifest_paths()
+    on_disk = set()
+    for path in glob.glob(os.path.join(ROOT, "assets", "**", "*"),
+                          recursive=True):
+        if os.path.isfile(path):
+            on_disk.add(os.path.relpath(path, ROOT))
+
+    orphans = sorted(on_disk - referenced - declared -
+                     {"assets/MANIFEST.tsv"})
+    if orphans:
+        print(f"note: {len(orphans)} asset(s) are loaded by nothing and not "
+              f"declared in MANIFEST.tsv:")
+        for orphan in orphans:
+            print(f"  unused  {orphan}")
+
+
 def main():
     found = collect_literals()
     if not found:
@@ -233,6 +293,7 @@ def main():
     sizes = check_pngs()
     check_manifest(sizes)
     check_backdrop_geometry(sizes)
+    report_unreferenced(found)
 
     for warning in warnings:
         print(f"warning: {warning}")

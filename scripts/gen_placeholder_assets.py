@@ -470,6 +470,21 @@ def main():
         "# Enforced by scripts/verify_assets.py (make verify).",
         "# path\twidth\theight\trole",
     ]
+    # Inputs first. These are never loaded by the game, so a reference scan
+    # reports them as unused -- but deleting them breaks the generator, so
+    # they are recorded explicitly as load-bearing.
+    inputs = [("assets/img/Niv1.png",
+               "GENERATOR INPUT: level 1 backdrop source")]
+    for src_dir, who in (("barre", "player 1"), ("barre1", "player 2")):
+        for i in range(6):
+            inputs.append(
+                (f"assets/img/{src_dir}/barre_{i}.png",
+                 f"GENERATOR INPUT: {who} health bar art, downscaled into hud/"))
+    for rel, role in inputs:
+        full = os.path.join(ROOT, rel)
+        if os.path.exists(full):
+            w, h = Image.open(full).size
+            lines.append(f"{rel}\t{w}\t{h}\t{role}")
     for path, size in made:
         rel = os.path.relpath(path, ROOT)
         key = rel.replace("assets/img/", "")
