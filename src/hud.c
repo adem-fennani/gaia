@@ -17,20 +17,28 @@ static int minimap_x(int world_x) {
   return HUD_MAP_X + pad + (x * span / LEVEL1_W);
 }
 
+/* Full health, and the number of barre frames. */
+#define HUD_VIE_MAX 5
+
 static void draw_bar(game_ctx *ctx, const perso *player, int x) {
   plat_rect dst;
-  int frame = player->vie;
+  int health = player->vie;
+  int frame;
   if (player->barre == NULL) {
     return;
   }
-  /* vie is clamped rather than trusted: nothing decrements it yet, but Slice 6
-   * makes enemies do exactly that, and barre holds only 6 frames. */
-  if (frame < 0) {
-    frame = 0;
+  if (health < 0) {
+    health = 0;
   }
-  if (frame > 5) {
-    frame = 5;
+  if (health > HUD_VIE_MAX) {
+    health = HUD_VIE_MAX;
   }
+  /* The art is indexed by damage taken, not by health: barre_0 is five red
+   * hearts (full) and barre_5 is five empty ones. The old code blitted
+   * barre[vie] directly, which is inverted -- and because vie was never
+   * decremented anywhere, only barre[5] ever rendered, so the HUD showed an
+   * empty bar while both players were at full health. */
+  frame = HUD_VIE_MAX - health;
   if (player->barre[frame] == NULL) {
     return;
   }

@@ -73,6 +73,14 @@ void load_game_resources(void) {
   art->ground_tile.img = plat_image_load("assets/img/level1/ground_tile.png");
   art->marker_p1.img = plat_image_load("assets/img/hud/marker_p1.png");
   art->marker_p2.img = plat_image_load("assets/img/hud/marker_p2.png");
+  for (i = 0; i < 2; ++i) {
+    int f;
+    for (f = 0; f < ENEMY_FRAMES; ++f) {
+      char path[64];
+      snprintf(path, sizeof(path), "assets/img/enemy/walk%d-%d.png", i, f);
+      art->enemy_frames[i][f] = plat_image_load(path);
+    }
+  }
 
   art->click = plat_sound_load("assets/audio/mouseclick.wav");
   if (art->click != NULL) {
@@ -234,6 +242,11 @@ void cleanup_game(void) {
   librer(art->ground_tile);
   librer(art->marker_p1);
   librer(art->marker_p2);
+  for (i = 0; i < 2; ++i) {
+    for (j = 0; j < ENEMY_FRAMES; ++j) {
+      plat_image_free(art->enemy_frames[i][j]);
+    }
+  }
 
   plat_sound_free(art->click);
 

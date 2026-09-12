@@ -7,6 +7,7 @@
 
 #include "../include/game_state.h"
 #include "../include/collision.h"
+#include "../include/enemy.h"
 #include "../include/hud.h"
 
 /* The collision box is now the player's authoritative position, so there is
@@ -147,6 +148,8 @@ static void spawn(perso *player, int x) {
   player->acceleration = 0;
   player->iscore = 0;
   player->vie = 5;
+  player->invuln = 0;
+  player->vx_impulse = 0;
   perso_sync_rect(player);
 }
 
@@ -155,6 +158,7 @@ static void spawn(perso *player, int x) {
 static void level1_enter(game_ctx *ctx) {
   spawn(&ctx->p, 60);
   spawn(&ctx->p1, 200);
+  enemy_reset_all(ctx->enemies);
 
   ctx->dep = 0;
   ctx->acc = 0;
@@ -170,6 +174,7 @@ static void level1_enter(game_ctx *ctx) {
   ctx->victory_score_p1 = 0;
   ctx->victory_time_sec = 0;
   ctx->victory_winner = 0;
+  ctx->mission_failed = 0;
   ctx->t_prev = plat_ticks();
 }
 
@@ -288,9 +293,30 @@ static void step_player(game_ctx *ctx, perso *player, int moving, int acc_mode,
 
   apply_acceleration(player, acc_mode, dt);
 
+  if (player->invuln > 0) {
+    player->invuln -= dt;
+    if (player->invuln < 0) {
+      player->invuln = 0;
+    }
+  }
+
   if (moving) {
     dx = perso_speed(player) * dt;
     animerPerso(player, dt);
+  }
+
+  /* Knockback rides along with normal movement and bleeds off. */
+  dx += player->vx_impulse * dt;
+  if (player->vx_impulse > 0) {
+    player->vx_impulse -= PLAYER_IMPULSE_DECAY * dt;
+    if (player->vx_impulse < 0) {
+      player->vx_impulse = 0;
+    }
+  } else if (player->vx_impulse < 0) {
+    player->vx_impulse += PLAYER_IMPULSE_DECAY * dt;
+    if (player->vx_impulse > 0) {
+      player->vx_impulse = 0;
+    }
   }
 
   /* Gravity, with a terminal velocity so a long fall cannot tunnel through a
@@ -337,8 +363,20 @@ static void level1_update(game_ctx *ctx) {
 
   while (ctx->step_acc >= LEVEL1_STEP) {
     ctx->step_acc -= LEVEL1_STEP;
+    int i;
     step_player(ctx, &ctx->p, ctx->dep == 1, ctx->acc, LEVEL1_STEP);
     step_player(ctx, &ctx->p1, ctx->dep1 == 1, ctx->acc1, LEVEL1_STEP);
+
+    for (i = 0; i < ENEMY_COUNT; ++i) {
+      enemy_step(&ctx->enemies[i], LEVEL1_STEP, ctx->obstacles,
+                 LEVEL1_OBSTACLE_COUNT, LEVEL1_GROUND_STRIP_Y, LEVEL1_W);
+    }
+    /* Contact is resolved after both sides have moved, so a hit cannot depend
+     * on which of them stepped first. */
+    enemy_collide_player(ctx->enemies, &ctx->p);
+    enemy_collide_player(ctx->enemies, &ctx->p1);
+    perso_sync_rect(&ctx->p);
+    perso_sync_rect(&ctx->p1);
   }
 
   update_camera(ctx);
@@ -348,16 +386,61 @@ static void level1_update(game_ctx *ctx) {
   ctx->p.iscore = (int)(ctx->p.wx / 10);
   ctx->p1.iscore = (int)(ctx->p1.wx / 10);
 
+  /* Either player running out of health fails the mission: it is co-op, and
+   * completion already requires both of them at the beacon. */
+  if (ctx->p.vie <= 0 || ctx->p1.vie <= 0) {
+    ctx->mission_failed = 1;
+    capture_victory_stats(ctx);
+    game_request(ctx, ST_VICTORY);
+    return;
+  }
+
   if (level1_completed(ctx)) {
     capture_victory_stats(ctx);
     game_request(ctx, ST_VICTORY);
   }
 }
 
+static void draw_enemies(game_ctx *ctx) {
+  int i;
+  for (i = 0; i < ENEMY_COUNT; ++i) {
+    const enemy *e = &ctx->enemies[i];
+    plat_surface *frame;
+    plat_rect dst;
+    if (!e->alive) {
+      continue;
+    }
+    frame = ctx->art.enemy_frames[e->dir][e->frame % ENEMY_FRAMES];
+    if (frame == NULL) {
+      continue;
+    }
+    /* Bottom-aligned and centred on the collision box, the same convention
+     * the players use, so art and collider cannot drift apart. */
+    dst.x = (Sint16)(e->body.x + (ENEMY_BOX_W - frame->w) / 2 - ctx->camera.x);
+    dst.y = (Sint16)(e->body.y + ENEMY_BOX_H - frame->h);
+    dst.w = frame->w;
+    dst.h = frame->h;
+    plat_blit(frame, NULL, ctx->screen, &dst);
+  }
+}
+
+/* Blink while immune, so the grace period is visible rather than just felt. */
+static int player_visible(const perso *player) {
+  if (player->invuln <= 0) {
+    return 1;
+  }
+  return ((int)(player->invuln * 12.0)) % 2 == 0;
+}
+
 static void level1_draw(game_ctx *ctx) {
   draw_scene(ctx);
-  afficherPerso(&ctx->p, ctx->screen, ctx->camera.x);
-  afficherPerso(&ctx->p1, ctx->screen, ctx->camera.x);
+  draw_enemies(ctx);
+  if (player_visible(&ctx->p)) {
+    afficherPerso(&ctx->p, ctx->screen, ctx->camera.x);
+  }
+  if (player_visible(&ctx->p1)) {
+    afficherPerso(&ctx->p1, ctx->screen, ctx->camera.x);
+  }
   hud_draw(ctx);
 }
 

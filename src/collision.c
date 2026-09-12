@@ -1,4 +1,5 @@
 #include "../include/collision.h"
+#include <math.h>
 
 static int overlaps(const aabb *body, const plat_rect *r) {
   return body->x < r->x + r->w && body->x + body->w > r->x &&
@@ -8,6 +9,7 @@ static int overlaps(const aabb *body, const plat_rect *r) {
 static void resolve_x(aabb *body, double dx, const plat_rect *solids,
                       int solid_count, double level_w) {
   int i;
+  double before = body->x;
   body->x += dx;
 
   if (body->x < 0) {
@@ -17,18 +19,31 @@ static void resolve_x(aabb *body, double dx, const plat_rect *solids,
     body->x = level_w - body->w;
   }
 
-  if (dx == 0) {
-    return;
-  }
   for (i = 0; i < solid_count; ++i) {
+    double left_face, right_face;
     if (!overlaps(body, &solids[i])) {
       continue;
     }
-    /* Push back to whichever face the motion came from. */
-    if (dx > 0) {
-      body->x = solids[i].x - body->w;
-    } else {
-      body->x = solids[i].x + solids[i].w;
+
+    left_face = solids[i].x - body->w;      /* rest against the left side */
+    right_face = solids[i].x + solids[i].w; /* rest against the right side */
+
+    /* Normally push back the way the motion came from. But if the body was
+     * already overlapping before it moved -- which an impulse or a teleport
+     * can cause -- motion direction is meaningless and would happily shove it
+     * out the far side. Fall back to the nearer face. */
+    {
+      aabb probe = *body;
+      probe.x = before;
+      if (overlaps(&probe, &solids[i]) || dx == 0) {
+        body->x = (fabs(before - left_face) <= fabs(before - right_face))
+                      ? left_face
+                      : right_face;
+      } else if (dx > 0) {
+        body->x = left_face;
+      } else {
+        body->x = right_face;
+      }
     }
   }
 }

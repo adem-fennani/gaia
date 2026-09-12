@@ -21,6 +21,7 @@
  * menu reset it but returning to it after ESC did not.
  */
 
+#include "enemy.h"
 #include "menu.h"
 #include "minimap.h"
 #include "perso.h"
@@ -82,6 +83,9 @@ typedef struct {
   image marker_p1; /* minimap position markers, one per player */
   image marker_p2;
 
+  /* [direction][frame], mirroring the perso image[][] layout. */
+  plat_surface *enemy_frames[2][ENEMY_FRAMES];
+
   plat_sound *click;
 
   /* HUD text. The 40pt perso.police_score is kept for the victory screen,
@@ -98,6 +102,7 @@ typedef struct {
   int running;
 
   perso p, p1;
+  enemy enemies[ENEMY_COUNT];
   minimap map;
   plat_rect camera;
 
@@ -128,6 +133,8 @@ typedef struct {
   int victory_score_p, victory_score_p1;
   int victory_time_sec;
   int victory_winner; /* 0 none, 1 p, 2 p1, 3 both */
+  /* The end-of-mission state doubles as the failure screen. */
+  int mission_failed;
 } game_ctx;
 
 typedef struct {

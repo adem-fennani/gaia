@@ -34,6 +34,8 @@
 /* apex = v^2 / 2g = 900^2 / 4000 = ~202px, enough to clear the 130px crates. */
 #define PLAYER_JUMP_SPEED 900.0
 #define PLAYER_TERMINAL_FALL 1500.0
+/* How fast a knockback impulse bleeds off, px/s per second. */
+#define PLAYER_IMPULSE_DECAY 900.0
 
 /* Walk cycle rate. The old animerPerso() advanced one frame per rendered
  * frame, so the cycle ran at whatever the frame rate happened to be. */
@@ -55,6 +57,11 @@ typedef struct {
    * doubles stops the per-frame Sint16 truncation from bending the jump arc. */
   double wx, wy;
   double anim_acc; /* seconds accumulated toward the next walk frame */
+  double invuln;   /* seconds of damage immunity remaining */
+  /* Horizontal impulse, px/s, decaying. Used for knockback: applying it as a
+   * velocity keeps it inside the collision resolver, where a direct write to
+   * wx could drop the player inside a solid. */
+  double vx_impulse;
 
   char scor[20];
   int iscore;

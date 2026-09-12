@@ -28,6 +28,8 @@ static void victory_update(game_ctx *ctx) {
 static void victory_draw(game_ctx *ctx) {
   plat_rect panel;
   plat_color title = {255, 240, 90, 0};
+  /* Failure gets a colder panel, so the two outcomes are distinguishable at a
+   * glance and not only by reading the heading. */
   plat_color white = {255, 255, 255, 0};
   plat_font *font = ctx->p.police_score;
   char line[128];
@@ -36,10 +38,23 @@ static void victory_draw(game_ctx *ctx) {
   panel.y = 0;
   panel.w = SCREEN_W;
   panel.h = SCREEN_H;
-  plat_fill_rect(ctx->screen, &panel, 18, 20, 42);
+  if (ctx->mission_failed) {
+    plat_fill_rect(ctx->screen, &panel, 42, 16, 22);
+  } else {
+    plat_fill_rect(ctx->screen, &panel, 18, 20, 42);
+  }
 
-  plat_text_draw(ctx->screen, font, "MISSION COMPLETE", 420, 120, title);
-  if (ctx->victory_winner == 3) {
+  if (ctx->mission_failed) {
+    plat_color red = {255, 120, 110, 0};
+    plat_text_draw(ctx->screen, font, "MISSION FAILED", 440, 120, red);
+    plat_text_draw(ctx->screen, font,
+                   "A squad member ran out of health.", 355, 205, white);
+  } else {
+    plat_text_draw(ctx->screen, font, "MISSION COMPLETE", 420, 120, title);
+  }
+  if (ctx->mission_failed) {
+    /* Fall through to the score lines below. */
+  } else if (ctx->victory_winner == 3) {
     plat_text_draw(ctx->screen, font,
                    "Team victory: both players reached the exit beacon.", 280,
                    205, white);
@@ -62,7 +77,7 @@ static void victory_draw(game_ctx *ctx) {
   plat_text_draw(ctx->screen, font, line, 380, 360, white);
   plat_text_draw(ctx->screen, font,
                  "Press ENTER, ESC, SPACE, or click to return to the menu",
-                 220, 440, title);
+                 220, 440, ctx->mission_failed ? white : title);
 }
 
 const game_state_handlers victory_state = {NULL, victory_event, victory_update,
