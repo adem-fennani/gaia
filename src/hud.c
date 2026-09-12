@@ -105,10 +105,10 @@ void hud_draw(game_ctx *ctx) {
   draw_bar(ctx, &ctx->p, HUD_PAD);
   draw_bar(ctx, &ctx->p1, HUD_P2_X);
 
-  snprintf(line, sizeof(line), "P1 score %d", ctx->p.iscore / 20);
+  snprintf(line, sizeof(line), "P1 score %d", ctx->p.iscore);
   plat_text_draw(ctx->screen, ctx->art.hud_font, line, HUD_PAD, HUD_ROW2,
                  white);
-  snprintf(line, sizeof(line), "P2 score %d", ctx->p1.iscore / 20);
+  snprintf(line, sizeof(line), "P2 score %d", ctx->p1.iscore);
   plat_text_draw(ctx->screen, ctx->art.hud_font, line, HUD_P2_X, HUD_ROW2,
                  white);
 

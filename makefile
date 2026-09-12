@@ -6,7 +6,7 @@ LDFLAGS = -lSDL -lSDL_ttf -lSDL_image -lSDL_mixer
 SRC = src/platform_sdl12.c src/menu.c src/perso.c src/minimap.c \
       src/game.c src/hud.c src/state_menu.c src/state_settings.c \
       src/state_level1.c \
-      src/state_victory.c
+      src/state_victory.c src/collision.c
 OBJ = $(patsubst src/%.c, build/%.o, $(SRC))
 
 all: pro

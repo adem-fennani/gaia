@@ -52,6 +52,14 @@ bool plat_audio_ok(void);
 plat_surface *plat_image_load(const char *path);
 void plat_image_free(plat_surface *surface);
 
+/* Horizontal centre of the surface's lowest band of opaque pixels, in surface
+ * coordinates. Used to anchor character frames by their feet: the sprite art
+ * is tightly cropped and its frame width changes with the pose (99px idle,
+ * 205px mid-stride), so there is no fixed offset that keeps a character
+ * standing still while its animation plays. Returns w/2 if nothing is opaque
+ * enough to measure. */
+int plat_surface_foot_anchor(plat_surface *surface);
+
 /* --- drawing ----------------------------------------------------------- */
 
 void plat_blit(plat_surface *src, const plat_rect *src_rect,

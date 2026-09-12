@@ -114,6 +114,77 @@ void plat_image_free(plat_surface *surface) {
   }
 }
 
+int plat_surface_foot_anchor(plat_surface *surface) {
+  const Uint8 opaque = 200;
+  /* Average over a short band rather than the single lowest row, so one stray
+   * antialiased pixel cannot define the anchor. */
+  const int band = 8;
+  int y;
+  int lowest = -1;
+  long sum = 0;
+  long count = 0;
+
+  if (surface == NULL || surface->w <= 0 || surface->h <= 0) {
+    return 0;
+  }
+  if (SDL_LockSurface(surface) != 0) {
+    return surface->w / 2;
+  }
+
+  for (y = surface->h - 1; y >= 0; --y) {
+    int x;
+    int found = 0;
+    for (x = 0; x < surface->w; ++x) {
+      Uint8 r, g, b, a;
+      Uint32 pixel = 0;
+      Uint8 *p = (Uint8 *)surface->pixels + y * surface->pitch +
+                 x * surface->format->BytesPerPixel;
+      switch (surface->format->BytesPerPixel) {
+      case 1:
+        pixel = *p;
+        break;
+      case 2:
+        pixel = *(Uint16 *)p;
+        break;
+      case 4:
+        pixel = *(Uint32 *)p;
+        break;
+      default:
+        /* 24-bit has no alpha channel to test, so treat it as opaque. */
+        pixel = 0;
+        break;
+      }
+      if (surface->format->BytesPerPixel == 3) {
+        a = SDL_ALPHA_OPAQUE;
+      } else {
+        SDL_GetRGBA(pixel, surface->format, &r, &g, &b, &a);
+      }
+      if (a >= opaque) {
+        found = 1;
+        sum += x;
+        count++;
+      }
+    }
+    if (found && lowest < 0) {
+      lowest = y;
+    }
+    if (lowest >= 0 && y <= lowest - band) {
+      break;
+    }
+    if (lowest < 0) {
+      /* Nothing opaque yet: discard what this row contributed. */
+      sum = 0;
+      count = 0;
+    }
+  }
+
+  SDL_UnlockSurface(surface);
+  if (count == 0) {
+    return surface->w / 2;
+  }
+  return (int)(sum / count);
+}
+
 /* --- drawing ----------------------------------------------------------- */
 
 void plat_blit(plat_surface *src, const plat_rect *src_rect, plat_surface *dst,

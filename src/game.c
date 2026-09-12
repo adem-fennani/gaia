@@ -54,6 +54,7 @@ bool init_engine(void) {
 
 void load_game_resources(void) {
   game_assets *art = &g_game.art;
+  int i;
 
   /* Level 1 scene art. The backdrop layers are built by
    * scripts/gen_placeholder_assets.py from Niv1.png, extended to the full
@@ -106,23 +107,30 @@ void load_game_resources(void) {
   initPerso1(&g_game.p1);
   initmap(&g_game.map);
 
-  /* Level 1 geometry, hardcoded here. A real level format is out of scope. */
+  /* Level 1 geometry, hardcoded here. A real level format is out of scope.
+   *
+   * Everything is bottom-aligned to the ground surface. The obstacles used to
+   * sit at y=520-525 with the ground at y=515, i.e. entirely *below* the
+   * surface and buried in the dirt, which was consistent with collision that
+   * could only push you sideways. Now that they can be landed on, they stand
+   * on the ground, and their heights match the art in assets/img/level1. */
   g_game.obstacles[0].x = 350;
-  g_game.obstacles[0].y = 525;
   g_game.obstacles[0].w = 80;
-  g_game.obstacles[0].h = 125;
+  g_game.obstacles[0].h = 128;
   g_game.obstacles[1].x = 850;
-  g_game.obstacles[1].y = 520;
   g_game.obstacles[1].w = 90;
   g_game.obstacles[1].h = 130;
   g_game.obstacles[2].x = 1350;
-  g_game.obstacles[2].y = 525;
   g_game.obstacles[2].w = 80;
-  g_game.obstacles[2].h = 125;
+  g_game.obstacles[2].h = 128;
+  for (i = 0; i < LEVEL1_OBSTACLE_COUNT; ++i) {
+    g_game.obstacles[i].y =
+        (Sint16)(LEVEL1_GROUND_STRIP_Y - g_game.obstacles[i].h);
+  }
   g_game.goal.x = 1900;
-  g_game.goal.y = 360;
   g_game.goal.w = 125;
   g_game.goal.h = 180;
+  g_game.goal.y = (Sint16)(LEVEL1_GROUND_STRIP_Y - g_game.goal.h);
 
   g_game.running = 1;
   g_game.state = ST_MENU;
@@ -138,9 +146,16 @@ void run_game_loop(void) {
 
   while (g_game.running) {
     const game_state_handlers *handlers = handlers_for(g_game.state);
+    Uint32 frame_start = plat_ticks();
+    Uint32 frame_ms;
 
-    g_game.dt = plat_ticks() - g_game.t_prev;
-    g_game.t_prev = plat_ticks();
+    g_game.dt = frame_start - g_game.t_prev;
+    g_game.t_prev = frame_start;
+    /* One tick reading per frame. It used to call plat_ticks() twice, so any
+     * time between the two calls vanished from the accounting. */
+    if (g_game.dt > FRAME_DT_CAP_MS) {
+      g_game.dt = FRAME_DT_CAP_MS;
+    }
 
     while (plat_event_poll(&event)) {
       /* Closing the window ends the program from any state, so it is handled
@@ -163,13 +178,15 @@ void run_game_loop(void) {
 
     plat_flip(g_game.screen);
 
-    /* Inverted delay: it shortens as frames get slower, so it is a feedback
-     * loop rather than a frame limiter. Kept as-is; Slice 5 replaces it with
-     * a real fixed timestep. */
-    if (g_game.dt > 0) {
-      plat_delay(300 / g_game.dt);
-    } else {
-      plat_delay(16);
+    /* Sleep off whatever is left of the frame budget.
+     *
+     * This replaces `plat_delay(300 / dt)`, which was not a frame limiter at
+     * all: the delay shortened as frames got slower, so it oscillated instead
+     * of converging. A 1ms frame slept 300ms, which made the next dt ~301 and
+     * slept 0ms, which made the next frame fast again. */
+    frame_ms = plat_ticks() - frame_start;
+    if (frame_ms < TARGET_FRAME_MS) {
+      plat_delay(TARGET_FRAME_MS - frame_ms);
     }
 
     /* Transitions run between frames, so a handler can request one without

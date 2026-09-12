@@ -8,6 +8,8 @@
 #include <SDL/SDL_video.h>
 #include <stdlib.h>
 
+static void compute_frame_anchors(const perso *p);
+
 void initPerso(perso *p) {
   int i, j;
   char pers[50];
@@ -53,22 +55,75 @@ void initPerso(perso *p) {
   p->pos_barre.y = 0;
   p->direction = 0;
   p->imag = 0;
-  p->pos_background.x = 60;
-  p->pos_background.y = 300;
-  p->pos_background.w = 219;
-  p->pos_background.h = 305;
+  p->wx = 60;
+  p->wy = LEVEL1_GROUND_STRIP_Y - PLAYER_BOX_H;
+  p->on_ground = 1;
+  p->anim_acc = 0;
+  perso_sync_rect(p);
+  compute_frame_anchors(p);
   p->acceleration = 0;
-  p->vitesse = 1;
+  p->vitesse = PLAYER_WALK_SPEED;
   p->up = 0;
   p->iscore = 0;
   p->vie = 5;
 
-  p->vect_x = 5;
-  p->vect_grav = 0.4;
-  p->vect_y = -6.5;
+  p->vect_x = 0;
+  p->vect_grav = PLAYER_GRAVITY;
+  p->vect_y = 0;
   p->jump = 0;
   printf("DEBUG: initPerso: Complete\n");
   fflush(stdout);
+}
+
+/* Foot anchor per frame, in surface coordinates: the horizontal centre of the
+ * frame's lowest opaque band. Both players share the same art, so this is
+ * computed once and indexed [direction][frame].
+ *
+ * Needed because the art is tightly cropped with no consistent registration
+ * point -- the idle frame is 99px wide and a mid-stride frame is 205px, so
+ * blitting every frame at the same x makes the character lurch sideways as it
+ * walks. Anchoring on the feet keeps the contact point still. */
+static int frame_anchor[2][7];
+static int frame_anchor_ready = 0;
+
+static void compute_frame_anchors(const perso *p) {
+  int i, j;
+  if (frame_anchor_ready) {
+    return;
+  }
+  for (i = 0; i < 2; i++) {
+    for (j = 0; j < 7; j++) {
+      frame_anchor[i][j] = plat_surface_foot_anchor(p->image[i][j]);
+    }
+  }
+  frame_anchor_ready = 1;
+}
+
+void perso_sync_rect(perso *p) {
+  p->pos_background.x = (Sint16)p->wx;
+  p->pos_background.y = (Sint16)p->wy;
+  p->pos_background.w = PLAYER_BOX_W;
+  p->pos_background.h = PLAYER_BOX_H;
+}
+
+double perso_speed(const perso *p) {
+  double speed = PLAYER_WALK_SPEED + p->acceleration;
+  if (speed < 0) {
+    speed = 0;
+  }
+  return (p->direction == 1) ? -speed : speed;
+}
+
+void perso_jump(perso *p) {
+  /* Only from the ground: the old code set up=1 on any press, so holding the
+   * key climbed indefinitely. */
+  if (!p->on_ground) {
+    return;
+  }
+  p->vect_y = -PLAYER_JUMP_SPEED;
+  p->on_ground = 0;
+  p->up = 1;
+  p->jump = 1;
 }
 
 /* Draws the character only. The health bar and score moved to src/hud.c,
@@ -81,83 +136,41 @@ void initPerso(perso *p) {
  * always-NULL originals. A const pointer makes that class of mistake
  * impossible. perso.score and perso.scor are now unused. */
 void afficherPerso(const perso *p, SDL_Surface *screen, int camera_x) {
-  SDL_Rect screen_pos;
+  SDL_Rect dst;
+  SDL_Surface *frame;
+  int dir, idx;
   if (p == NULL || screen == NULL) {
     return;
   }
-  screen_pos = p->pos_background;
-  screen_pos.x -= camera_x;
-  if (p->image[p->direction][p->imag] != NULL) {
-    plat_blit(p->image[p->direction][p->imag], NULL, screen, &screen_pos);
+  dir = (p->direction == 1) ? 1 : 0;
+  idx = p->imag;
+  if (idx < 0 || idx > 6) {
+    idx = 0;
   }
+  frame = p->image[dir][idx];
+  if (frame == NULL) {
+    return;
+  }
+  /* Anchored on the feet and bottom-aligned to the collision box, so the
+   * character stands on the floor instead of 80px inside it -- and stays put
+   * horizontally as the frame width changes through the walk cycle. */
+  dst.x = (Sint16)(p->wx + PLAYER_BOX_W / 2 - frame_anchor[dir][idx] -
+                   camera_x);
+  dst.y = (Sint16)(p->wy + PLAYER_BOX_H - frame->h);
+  dst.w = frame->w;
+  dst.h = frame->h;
+  plat_blit(frame, NULL, screen, &dst);
 }
 
-void animerPerso(perso *p) {
-  p->imag++;
-  if (p->imag >= 7)
-    p->imag = 1;
-}
-
-void deplacerPerso(perso *p, Uint32 dt) {
-  double dx;
-  dx = 0.5 * p->acceleration * dt * dt + p->vitesse * dt;
-
-  switch (p->direction) {
-
-  case 0:
-    p->pos_background.x += dx;
-    if (p->pos_background.x >= LEVEL1_W - 219) {
-      p->pos_background.x = LEVEL1_W - 219;
+void animerPerso(perso *p, double dt_seconds) {
+  p->anim_acc += dt_seconds;
+  while (p->anim_acc >= 1.0 / PLAYER_ANIM_FPS) {
+    p->anim_acc -= 1.0 / PLAYER_ANIM_FPS;
+    p->imag++;
+    /* Frame 0 is the standing pose; the walk cycle is frames 1-6. */
+    if (p->imag >= 7) {
+      p->imag = 1;
     }
-    break;
-
-  case 1:
-    p->pos_background.x -= dx;
-    if (p->pos_background.x <= 0) {
-      p->pos_background.x = 0;
-    }
-    break;
-
-  default:
-    break;
-  }
-}
-
-void saut(perso *p, int posy) {
-  if (p->up == 1) {
-    if (p->jump == 1) {
-      switch (p->direction) {
-      case 0:
-        p->pos_background.x += p->vect_x;
-        break;
-      case 1:
-        p->pos_background.x -= p->vect_x;
-        break;
-      default:
-        break;
-      }
-    }
-    p->pos_background.y += p->vect_y;
-    p->vect_y += p->vect_grav;
-  }
-  if (p->pos_background.y > posy) {
-    p->vect_y = -6.5;
-    p->up = 0;
-    p->jump = 0;
-    p->pos_background.y = posy;
-  }
-
-  if (p->pos_background.x <= 0) {
-    p->pos_background.x = 0;
-  }
-  if (p->pos_background.x >= LEVEL1_W - 219) {
-    p->pos_background.x = LEVEL1_W - 219;
-  }
-}
-
-void ypos_jump(perso p, int *posy) {
-  if (p.up == 0) {
-    *posy = p.pos_background.y;
   }
 }
 
@@ -206,19 +219,21 @@ void initPerso1(perso *p) {
   p->pos_barre.y = 0;
   p->direction = 0;
   p->imag = 0;
-  p->pos_background.x = 200;
-  p->pos_background.y = 300;
-  p->pos_background.w = 219;
-  p->pos_background.h = 305;
+  p->wx = 200;
+  p->wy = LEVEL1_GROUND_STRIP_Y - PLAYER_BOX_H;
+  p->on_ground = 1;
+  p->anim_acc = 0;
+  perso_sync_rect(p);
+  compute_frame_anchors(p);
   p->acceleration = 0;
-  p->vitesse = 1;
+  p->vitesse = PLAYER_WALK_SPEED;
   p->up = 0;
   p->iscore = 0;
   p->vie = 5;
 
-  p->vect_x = 5;
-  p->vect_grav = 0.4;
-  p->vect_y = -6.5;
+  p->vect_x = 0;
+  p->vect_grav = PLAYER_GRAVITY;
+  p->vect_y = 0;
   p->jump = 0;
   printf("DEBUG: initPerso1: Complete\n");
   fflush(stdout);

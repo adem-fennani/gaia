@@ -47,8 +47,12 @@ s = s.replace(flip, flip + """
       const char *probe_dir = getenv("GAIA_PROBE");
       if (probe_dir != NULL) {
         char probe_path[1024];
-        g_game.p.pos_background.x = 60 + probe_n * 24;
-        g_game.p1.pos_background.x = 200 + probe_n * 24;
+        /* wx is authoritative since the collision rewrite; pos_background is
+         * derived from it for drawing. */
+        g_game.p.wx = 60 + probe_n * 24;
+        g_game.p1.wx = 200 + probe_n * 24;
+        perso_sync_rect(&g_game.p);
+        perso_sync_rect(&g_game.p1);
         if (probe_n == 0 || probe_n == 20 || probe_n == 40 ||
             probe_n == 60 || probe_n == 80) {
           snprintf(probe_path, sizeof(probe_path), "%s/frame_%02d.bmp",

@@ -29,12 +29,18 @@
 #define SCREEN_W 1150
 #define SCREEN_H 650
 
-/* The player sprite's resting pos_background.y. */
-#define LEVEL1_GROUND_Y 300
-/* Top of the drawn ground strip in world space -- a different thing from
- * LEVEL1_GROUND_Y, which is where the sprite's top-left sits. */
-#define LEVEL1_GROUND_STRIP_Y 515
+/* LEVEL1_W and LEVEL1_GROUND_STRIP_Y come from perso.h. */
 #define LEVEL1_OBSTACLE_COUNT 3
+
+/* Physics timestep, in seconds, and the largest frame the accumulator will
+ * absorb. Capping is what stops a stall from queueing a catch-up burst. */
+#define LEVEL1_STEP (1.0 / 60.0)
+#define LEVEL1_MAX_FRAME 0.10
+
+/* Frame pacing. TARGET_FRAME_MS is the budget the loop sleeps out to;
+ * FRAME_DT_CAP_MS bounds what a stalled frame can report as elapsed. */
+#define TARGET_FRAME_MS 16
+#define FRAME_DT_CAP_MS 100
 #define GROUND_TILE_W 64
 
 #define VICTORY_AUTO_RETURN_MS 4000
@@ -99,13 +105,16 @@ typedef struct {
   plat_rect obstacles[LEVEL1_OBSTACLE_COUNT];
   plat_rect goal;
 
-  /* Per-player input flags. dep = a move key is held, acc = 1 for
-   * accelerate / 2 for decelerate, posy = ground y captured on jump. */
-  int dep, acc, posy;
-  int dep1, acc1, posy1;
+  /* Per-player input flags. dep = a move key is held, acc = 1 to run forward
+   * / 2 to run backward. The old posy/posy1 scalars are gone: the floor is
+   * now found by collision, not captured on the jump keypress. */
+  int dep, acc;
+  int dep1, acc1;
 
   /* Real elapsed ms for the last frame, and the tick it was measured from. */
   Uint32 dt, t_prev;
+  /* Unconsumed time carried into the next physics step. */
+  double step_acc;
 
   /* Menu and settings. */
   int hover;      /* highlighted button, 1-3, or 0 for none */
