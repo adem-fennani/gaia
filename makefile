@@ -1,5 +1,6 @@
 CC = gcc
-CFLAGS = -g -Wall -Wextra -Wshadow -I$(PWD)/include $(shell sdl-config --cflags)
+EXTRA_CFLAGS =
+CFLAGS = -g -Wall -Wextra -Wshadow $(EXTRA_CFLAGS) -I$(PWD)/include $(shell sdl-config --cflags)
 LDFLAGS = -lSDL -lSDL_ttf -lSDL_image -lSDL_mixer
 
 SRC = src/menu.c src/main_menu.c src/perso.c src/minimap.c src/utils.c
@@ -18,3 +19,19 @@ build:
 
 clean:
 	rm -rf build/*.o pro compile_commands.json build
+
+# Warning-free is a project invariant; strict makes a regression fail the build.
+strict:
+	$(MAKE) clean
+	$(MAKE) EXTRA_CFLAGS=-Werror pro
+
+verify:
+	python3 scripts/verify_assets.py
+
+smoke: pro
+	./scripts/smoke_boot.sh
+
+# What CI runs, and what to run before a commit.
+check: strict verify smoke
+
+.PHONY: all clean strict verify smoke check
